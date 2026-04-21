@@ -1,1 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+@layer base {
+  :root {
+    --primary: 21 128 61;
+    --secondary: 37 99 235;
+  }
+  
+  /* Tombol besar untuk driver tua */
+  .btn-large {
+    @apply py-6 px-4 text-xl font-bold rounded-xl transition-all active:scale-95;
+  }
+  
+  /* Font besar untuk readability */
+  html {
+    font-size: 16px;
+  }
+  
+  @media (min-width: 768px) {
+    html {
+      font-size: 18px;
+    }
+  }
+  
+  /* Touch targets minimal 44x44pt */
+  button, a, [role="button"] {
+    @apply min-h-[44px] min-w-[44px];
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl shadow-md p-5;
+  }
+  
+  .badge {
+    @apply px-3 py-1 rounded-full text-sm font-semibold;
+  }
+}
