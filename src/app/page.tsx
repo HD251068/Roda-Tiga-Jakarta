@@ -1,37 +1,33 @@
-'use client'
-
-import { useState } from 'react'
-import Link from 'next/link'
-
-export default function HomePage() {
-  const [role, setRole] = useState<'passenger' | 'driver' | null>(null)
-
+export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-green-700 to-green-500">
-      <div className="text-center mb-12">
-        <div className="text-7xl mb-4">🚛⚡</div>
-        <h1 className="text-4xl font-bold text-white mb-2">Bajaj Electric Jakarta</h1>
-        <p className="text-white text-lg">Transportasi ramah lingkungan untuk Jakarta</p>
-      </div>
-
-      <div className="w-full max-w-md space-y-4">
-        <Link href="/passenger">
-          <button className="w-full bg-yellow-500 hover:bg-yellow-600 text-white p-6 rounded-2xl text-2xl font-bold shadow-lg transition-all">
-            🧑 Saya Penumpang
+    <main className="flex min-h-screen flex-col items-center justify-center p-24">
+      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
+        <h1 className="text-4xl font-bold mb-4">🚕 Bajaj Elektrik Jakarta</h1>
+        <p className="text-xl mb-8">Platform Transportasi Ramah Lingkungan</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+          <div className="p-6 border rounded-lg hover:shadow-lg transition">
+            <h2 className="text-2xl font-bold mb-2">🔋 100% Elektrik</h2>
+            <p>Zero emisi, hemat energi</p>
+          </div>
+          
+          <div className="p-6 border rounded-lg hover:shadow-lg transition">
+            <h2 className="text-2xl font-bold mb-2">💰 Hemat 60%</h2>
+            <p>Biaya operasional lebih murah</p>
+          </div>
+          
+          <div className="p-6 border rounded-lg hover:shadow-lg transition">
+            <h2 className="text-2xl font-bold mb-2">🌱 Ramah Lingkungan</h2>
+            <p>Udara Jakarta lebih bersih</p>
+          </div>
+        </div>
+        
+        <div className="mt-12 text-center">
+          <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg">
+            Pesan Sekarang
           </button>
-        </Link>
-
-        <Link href="/driver">
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-2xl text-2xl font-bold shadow-lg transition-all">
-            👨‍✈️ Saya Pengemudi
-          </button>
-        </Link>
+        </div>
       </div>
-
-      <div className="mt-12 text-center text-white text-sm">
-        <p>📞 Call Center: 1500-123</p>
-        <p className="mt-1">💬 WhatsApp: 0812-3456-7890</p>
-      </div>
-    </div>
+    </main>
   )
 }
