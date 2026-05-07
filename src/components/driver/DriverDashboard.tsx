@@ -22,7 +22,7 @@ export default function DriverDashboard({ driver, isOnline, setIsOnline }: Drive
     // Subscribe ke order baru
     const subscription = supabase
       .channel('rides')
-      .on('INSERT', (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides' }, (payload) => {
         if (isOnline) {
           playSound('/audio/new-order.mp3')
           setActiveRide(payload.new)

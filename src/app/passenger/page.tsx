@@ -7,8 +7,8 @@ import { useGeolocation } from '@/hooks/useGeolocation'
 
 export default function PassengerPage() {
   const [step, setStep] = useState<'pickup' | 'destination' | 'order'>('pickup')
-  const [pickupLocation, setPickupLocation] = useState(null)
-  const [destinationLocation, setDestinationLocation] = useState(null)
+  const [pickupLocation, setPickupLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [destinationLocation, setDestinationLocation] = useState<{ lat: number; lng: number } | null>(null)
   const { location, error } = useGeolocation()
 
   return (
@@ -39,7 +39,7 @@ export default function PassengerPage() {
         <OrderForm 
           pickup={pickupLocation}
           destination={destinationLocation}
-          onNext={setStep}
+          onNext={(s) => setStep(s as "pickup" | "destination" | "order")}
         />
       </div>
 

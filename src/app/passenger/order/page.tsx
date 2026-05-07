@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation'
 import MapView from '@/components/common/MapView'
 import FareDisplay from '@/components/common/FareDisplay'
 import TipSelector from '@/components/common/TipSelector'
-import { calculateFareByDistance } from '@/lib/utils/distanceCalculator'
+import { calculateFare as calcFare } from "@/lib/utils/distanceCalculator"
 
 export default function OrderPage() {
   const router = useRouter()
   const [pickup, setPickup] = useState<{ lat: number; lng: number } | null>(null)
   const [destination, setDestination] = useState<{ lat: number; lng: number } | null>(null)
   const [step, setStep] = useState<'pickup' | 'destination' | 'fare'>('pickup')
-  const [fareData, setFareData] = useState<{ fare: number; range: string; distance: number } | null>(null)
+  const [fareData, setFareData] = useState<{ fare: number; range_name: string; min_km: number; max_km: number; distance: number } | null>(null)
   const [tipAmount, setTipAmount] = useState(0)
   const [loading, setLoading] = useState(false)
 
@@ -21,11 +21,13 @@ export default function OrderPage() {
     
     // Hitung jarak (mock - seharusnya panggil API)
     const distance = 5.2 // mock distance
-    const fareResult = calculateFareByDistance(distance)
+    const fareResult = calcFare(distance)
     
     setFareData({
       fare: fareResult.fare,
-      range: fareResult.range,
+      range_name: fareResult.range,
+      min_km: 0,
+      max_km: 0,
       distance: distance
     })
     setStep('fare')
@@ -116,10 +118,8 @@ export default function OrderPage() {
 
         {step === 'fare' && fareData && (
           <div className="space-y-4">
-            <FareDisplay 
-              fare={fareData.fare}
-              distance={fareData.distance}
-              range={fareData.range}
+            <FareDisplay
+              fareData={fareData}
             />
             
             <TipSelector 

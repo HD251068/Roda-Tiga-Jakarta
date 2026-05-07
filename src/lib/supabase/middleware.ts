@@ -1,21 +1,29 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { createServerClient } from "@supabase/ssr"
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
 export async function supabaseMiddleware(req: NextRequest) {
   const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
-  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return req.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
   const { data: { session } } = await supabase.auth.getSession()
-  
-  // Protected routes
-  const isDriverRoute = req.nextUrl.pathname.startsWith('/driver')
-  const isPassengerRoute = req.nextUrl.pathname.startsWith('/passenger')
-  
+  const isDriverRoute = req.nextUrl.pathname.startsWith("/driver")
+  const isPassengerRoute = req.nextUrl.pathname.startsWith("/passenger")
   if ((isDriverRoute || isPassengerRoute) && !session) {
-    const redirectUrl = new URL('/', req.url)
+    const redirectUrl = new URL("/", req.url)
     return NextResponse.redirect(redirectUrl)
   }
-  
   return res
 }

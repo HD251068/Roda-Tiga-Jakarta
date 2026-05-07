@@ -13,3 +13,13 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
 function deg2rad(deg: number): number {
   return deg * (Math.PI/180)
 }
+
+export function calculateFare(distanceKm: number): { fare: number; range: string; distance: number } {
+  const baseFare = 10000
+  const perKm = 3000
+  return {
+    fare: baseFare + Math.round(distanceKm * perKm),
+    range: `${Math.round(distanceKm * perKm - 2000)}-${Math.round(distanceKm * perKm + 2000)}`,
+    distance: distanceKm
+  }
+}
