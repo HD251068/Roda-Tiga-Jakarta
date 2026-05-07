@@ -4,10 +4,17 @@ import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1.0,
+  maximumScale: 1.0,
+  userScalable: false,
+}
+
 export const metadata: Metadata = {
   title: 'Bajaj Electric Jakarta - Transportasi Ramah Lingkungan',
   description: 'Aplikasi pemesanan bajaj listrik untuk wilayah DKI Jakarta',
-  viewport: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes',
+
 }
 
 export default function RootLayout({
