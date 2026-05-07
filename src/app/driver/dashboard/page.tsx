@@ -17,12 +17,16 @@ export default function DriverDashboardPage() {
     
     // Subscribe ke order baru
     const subscription = supabase
-      .channel('rides')
-      .on('INSERT', (payload) => {
-        if (isOnline) {
-          setActiveRide(payload.new)
-        }
-      })
+  .channel('rides')
+  .on('postgres_changes', 
+    { event: 'INSERT', schema: 'public', table: 'rides' }, 
+    (payload) => {
+      if (isOnline) {
+        setActiveRide(payload.new)
+      }
+    }
+  )
+  .subscribe()
       .subscribe()
 
     return () => {
