@@ -1,33 +1,37 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+
 export default function Home() {
+  const router = useRouter()
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
-        <h1 className="text-4xl font-bold mb-4">🚕 Bajaj Elektrik Jakarta</h1>
-        <p className="text-xl mb-8">Platform Transportasi Ramah Lingkungan</p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-          <div className="p-6 border rounded-lg hover:shadow-lg transition">
-            <h2 className="text-2xl font-bold mb-2">🔋 100% Elektrik</h2>
-            <p>Zero emisi, hemat energi</p>
-          </div>
-          
-          <div className="p-6 border rounded-lg hover:shadow-lg transition">
-            <h2 className="text-2xl font-bold mb-2">💰 Hemat 60%</h2>
-            <p>Biaya operasional lebih murah</p>
-          </div>
-          
-          <div className="p-6 border rounded-lg hover:shadow-lg transition">
-            <h2 className="text-2xl font-bold mb-2">🌱 Ramah Lingkungan</h2>
-            <p>Udara Jakarta lebih bersih</p>
-          </div>
-        </div>
-        
-        <div className="mt-12 text-center">
-          <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg">
-            Pesan Sekarang
-          </button>
-        </div>
+    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white flex flex-col items-center justify-center px-6">
+      <div className="w-24 h-24 rounded-3xl bg-orange-500 flex items-center justify-center mb-6 shadow-xl">
+        <span className="text-6xl">⚡</span>
       </div>
-    </main>
+      <h1 className="text-3xl font-bold text-gray-800 mb-2">Bajaj Elektrik</h1>
+      <p className="text-gray-500 text-center mb-10">Platform Transportasi Ramah Lingkungan Jakarta</p>
+      <div className="w-full max-w-sm space-y-3">
+        <button
+          onClick={() => router.push('/passenger')}
+          className="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-all"
+        >
+          🧑 Saya Penumpang
+        </button>
+        <button
+          onClick={() => router.push('/driver')}
+          className="w-full py-4 bg-green-500 text-white rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-all"
+        >
+          🚗 Saya Driver
+        </button>
+        <button
+          onClick={() => router.push('/station')}
+          className="w-full py-4 bg-blue-500 text-white rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-all"
+        >
+          🏪 Stasiun Pengisian
+        </button>
+      </div>
+    </div>
   )
 }
