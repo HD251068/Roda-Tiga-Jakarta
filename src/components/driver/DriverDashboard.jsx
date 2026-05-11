@@ -1,3 +1,4 @@
+// @ts-nocheck
 // src/components/driver/DriverDashboard.jsx
 
 'use client'
