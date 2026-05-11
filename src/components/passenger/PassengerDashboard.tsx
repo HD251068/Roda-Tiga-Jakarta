@@ -2,53 +2,33 @@
 // @ts-nocheck
 'use client'
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 
 const MAPBOX_TOKEN = "pk.eyJ1Ijoicm9kYXRpZ2FqYWthcnRhIiwiYSI6ImNtb2kzajdxMTAycnYycnBuaXJ2ZnBkbjIifQ.BRtYhcrtisAEZWWyM0ShlA"
 const JAKARTA_CENTER = { lng: 106.8272, lat: -6.1751 }
 
-// Palet outdoor-ready — kontras tinggi untuk sinar matahari Indonesia
 const T = {
-  // Hijau forest — kontras 8:1+ di atas putih
-  forest:    "#1A4A42",
-  forestD:   "#0D2E28",
-  forestM:   "#2D6B5F",
-  forestBg:  "#E8F4F1",
-  forestBg2: "#F0F7F5",
-  // Terakota kuat — kontras 5:1+ di atas putih
-  terra:     "#B5421A",
-  terraD:    "#8F3314",
-  terraBg:   "#FAEAE4",
-  terraBg2:  "#F5D5C8",
-  // Teks
-  ink:       "#0D2420",
-  ink2:      "#2A4A45",
-  ink3:      "#5A7A76",
-  ink4:      "#8AA8A4",
-  // Surface
-  white:     "#FFFFFF",
-  surface:   "#F8FFFE",
-  surface2:  "#F0F7F5",
-  border:    "#1A4A42",
-  borderL:   "#B8D4CF",
-  // Semantik
-  warn:      "#8A5C00",
-  warnBg:    "#FFF8E6",
-  warnBdr:   "#D4A820",
-  good:      "#1A4A42",
+  forest:"#1A4A42", forestD:"#0D2E28", forestM:"#2D6B5F",
+  forestBg:"#E8F4F1", forestBg2:"#F0F7F5",
+  terra:"#B5421A", terraD:"#8F3314", terraBg:"#FAEAE4", terraBg2:"#F5D5C8",
+  ink:"#0D2420", ink2:"#2A4A45", ink3:"#5A7A76", ink4:"#8AA8A4",
+  white:"#FFFFFF", surface:"#F8FFFE", surface2:"#F0F7F5",
+  border:"#1A4A42", borderL:"#B8D4CF",
+  warn:"#8A5C00", warnBg:"#FFF8E6", warnBdr:"#D4A820",
 }
 
 const PEAK_HOURS = [{s:7,e:9},{s:11,e:13},{s:16,e:19}]
 const BASE_FARES = [15000,25000,50000]
 const GOJEK_FARES = [18000,28000,55000]
 const TIPS = [0,2000,5000,10000,20000]
-const POPULAR = [
-  {name:"Blok M",      ic:"🏢", lat:-6.2441, lng:106.7989},
-  {name:"Sudirman",    ic:"🏙️", lat:-6.2088, lng:106.8230},
-  {name:"Monas",       ic:"🗼", lat:-6.1754, lng:106.8272},
-  {name:"Kemayoran",   ic:"✈️", lat:-6.1620, lng:106.8551},
-  {name:"Tanah Abang", ic:"🛍️", lat:-6.1863, lng:106.8114},
-  {name:"Senen",       ic:"🚉", lat:-6.1763, lng:106.8447},
+
+// Kategori POI yang paling mudah ditemukan driver bajaj
+const POI_CATEGORIES = "mosque,convenience,bus_stop,school,atm,pharmacy"
+
+// Fallback favorites jika user baru (belum ada riwayat)
+const DEFAULT_FAVORITES = [
+  { name:"Rumah", ic:"🏠", lat:null, lng:null, isPlaceholder:true },
+  { name:"Kantor", ic:"🏢", lat:null, lng:null, isPlaceholder:true },
 ]
 
 function isPeak(){const h=new Date().getHours();return PEAK_HOURS.some(p=>h>=p.s&&h<p.e)}
@@ -63,153 +43,105 @@ function calcDist(a,b){
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))
 }
 
+// Ambil 4 POI terdekat via Mapbox Search Box API
+async function fetchNearbyPOI(lat, lng) {
+  try {
+    const url = `https://api.mapbox.com/search/searchbox/v1/category/${POI_CATEGORIES}?proximity=${lng},${lat}&limit=4&language=id&access_token=${MAPBOX_TOKEN}`
+    const r = await fetch(url)
+    const d = await r.json()
+    return (d.features || []).slice(0, 4).map(f => ({
+      name: f.properties.name,
+      address: f.properties.full_address?.split(",")[0] || "",
+      lat: f.geometry.coordinates[1],
+      lng: f.geometry.coordinates[0],
+      category: f.properties.poi_category?.[0] || "place",
+      ic: getCategoryIcon(f.properties.poi_category?.[0]),
+      isDynamic: true,
+    }))
+  } catch {
+    return []
+  }
+}
+
+function getCategoryIcon(cat) {
+  const map = {
+    mosque:"🕌", prayer_room:"🕌", church:"⛪",
+    convenience:"🏪", supermarket:"🛒", grocery:"🛒",
+    bus_stop:"🚌", train_station:"🚉", transit:"🚌",
+    school:"🏫", university:"🎓",
+    atm:"🏧", bank:"🏦",
+    pharmacy:"💊", hospital:"🏥", clinic:"🏥",
+    restaurant:"🍽️", cafe:"☕",
+    gas_station:"⛽",
+  }
+  return map[cat] || "📍"
+}
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-
-/* Tombol utama — hijau forest gelap, teks putih, kontras 8:1 */
-.btn-primary{
-  background:#1A4A42;color:#FFFFFF;border:none;border-radius:12px;
-  padding:16px;font-size:15px;font-weight:700;cursor:pointer;width:100%;
-  min-height:52px;transition:background .15s,transform .1s;
-  font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.01em
-}
+.btn-primary{background:#1A4A42;color:#FFFFFF;border:none;border-radius:12px;padding:16px;font-size:15px;font-weight:700;cursor:pointer;width:100%;min-height:52px;transition:background .15s,transform .1s;font-family:'Plus Jakarta Sans',sans-serif}
 .btn-primary:hover{background:#0D2E28}
 .btn-primary:active{transform:scale(.97)}
 .btn-primary:disabled{opacity:.4;cursor:not-allowed}
-
-/* Tombol CTA — terakota, teks putih */
-.btn-cta{
-  background:#B5421A;color:#FFFFFF;border:none;border-radius:12px;
-  padding:16px;font-size:15px;font-weight:700;cursor:pointer;width:100%;
-  min-height:52px;transition:background .15s,transform .1s;
-  font-family:'Plus Jakarta Sans',sans-serif
-}
+.btn-cta{background:#B5421A;color:#FFFFFF;border:none;border-radius:12px;padding:16px;font-size:15px;font-weight:700;cursor:pointer;width:100%;min-height:52px;transition:background .15s,transform .1s;font-family:'Plus Jakarta Sans',sans-serif}
 .btn-cta:hover{background:#8F3314}
 .btn-cta:active{transform:scale(.97)}
-
-/* Tombol ghost — border tebal, teks gelap */
-.btn-ghost{
-  background:#FFFFFF;border:2px solid #1A4A42;border-radius:12px;
-  color:#0D2420;padding:14px 16px;font-size:14px;font-weight:600;
-  cursor:pointer;min-height:52px;transition:background .15s;
-  font-family:'Plus Jakarta Sans',sans-serif
-}
+.btn-ghost{background:#FFFFFF;border:2px solid #1A4A42;border-radius:12px;color:#0D2420;padding:14px 16px;font-size:14px;font-weight:600;cursor:pointer;min-height:52px;transition:background .15s;font-family:'Plus Jakarta Sans',sans-serif}
 .btn-ghost:hover{background:#E8F4F1}
-
-/* Card — putih bersih, border tegas */
-.card{
-  background:#FFFFFF;
-  border:2px solid #B8D4CF;
-  border-radius:16px;
-}
-
-/* Input — border tebal, teks gelap */
-.input-wrap{
-  background:#FFFFFF;border:2px solid #B8D4CF;border-radius:12px;
-  padding:14px 16px;display:flex;align-items:center;gap:12px;
-  cursor:pointer;transition:border-color .15s;min-height:64px
-}
+.card{background:#FFFFFF;border:2px solid #B8D4CF;border-radius:16px}
+.input-wrap{background:#FFFFFF;border:2px solid #B8D4CF;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s;min-height:64px}
 .input-wrap:hover{border-color:#1A4A42}
 .input-wrap.active{border-color:#1A4A42;background:#E8F4F1}
-.input-label{
-  font-size:11px;color:#1A4A42;font-weight:700;
-  text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px
-}
+.input-label{font-size:11px;color:#1A4A42;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
 .input-val{font-size:14px;font-weight:700;color:#0D2420;line-height:1.3}
 .input-placeholder{font-size:14px;color:#8AA8A4}
-
-/* Tip button */
-.tip-btn{
-  padding:10px 14px;border-radius:10px;border:2px solid #B8D4CF;
-  background:#FFFFFF;font-size:13px;font-weight:600;cursor:pointer;
-  color:#0D2420;transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif;
-  min-height:44px
-}
+.tip-btn{padding:10px 14px;border-radius:10px;border:2px solid #B8D4CF;background:#FFFFFF;font-size:13px;font-weight:600;cursor:pointer;color:#0D2420;transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif;min-height:44px}
 .tip-btn.active{background:#F5D5C8;border-color:#B5421A;color:#8F3314}
-
-/* Sheet bottom */
 .sheet-bg{position:fixed;inset:0;background:rgba(13,36,32,.75);z-index:40;display:flex;align-items:flex-end;justify-content:center}
-.sheet{
-  width:100%;max-width:430px;background:#FFFFFF;
-  border-radius:20px 20px 0 0;padding:20px;
-  max-height:88vh;overflow-y:auto;
-  animation:slideUp .3s cubic-bezier(.34,1.56,.64,1);
-  border-top:3px solid #1A4A42
-}
+.sheet{width:100%;max-width:430px;background:#FFFFFF;border-radius:20px 20px 0 0;padding:20px;max-height:88vh;overflow-y:auto;animation:slideUp .3s cubic-bezier(.34,1.56,.64,1);border-top:3px solid #1A4A42}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-
-/* Header */
-.header-bar{
-  position:fixed;top:0;left:50%;transform:translateX(-50%);
-  width:100%;max-width:430px;z-index:20;
-  background:#1A4A42;
-  padding:14px 16px 13px;display:flex;align-items:center;gap:12px;
-}
-.header-logo{
-  width:38px;height:38px;border-radius:10px;
-  background:rgba(255,255,255,.15);
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;border:1.5px solid rgba(255,255,255,.3)
-}
+.header-bar{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:20;background:#1A4A42;padding:14px 16px 13px;display:flex;align-items:center;gap:12px}
+.header-logo{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:20px;border:1.5px solid rgba(255,255,255,.3)}
 .header-title{font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#FFFFFF;line-height:1.2}
 .header-sub{font-size:11px;color:rgba(255,255,255,.8);font-weight:500}
-.header-badge{
-  margin-left:auto;background:#B5421A;color:#FFFFFF;
-  padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700
-}
-
-/* Stat rows */
+.header-badge{margin-left:auto;background:#B5421A;color:#FFFFFF;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700}
 .stat-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1.5px solid #E8F4F1;font-size:14px}
 .stat-row:last-child{border-bottom:none}
-
-/* Nav */
-.nav-bar{
-  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
-  width:100%;max-width:430px;
-  background:#FFFFFF;border-top:2px solid #1A4A42;
-  display:flex;justify-content:space-around;
-  padding:10px 0 18px;z-index:30
-}
+.nav-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#FFFFFF;border-top:2px solid #1A4A42;display:flex;justify-content:space-around;padding:10px 0 18px;z-index:30}
 .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 16px;min-width:60px}
 .nav-ic{font-size:22px;opacity:.2;transition:opacity .2s}
 .nav-lbl{font-size:11px;color:#8AA8A4;font-weight:600}
 .nav-item.active .nav-ic{opacity:1}
 .nav-item.active .nav-lbl{color:#1A4A42}
-
-/* Tab pages */
-.tab-page{
-  position:fixed;inset:0;top:0;max-width:430px;
-  left:50%;transform:translateX(-50%);
-  background:#F0F7F5;overflow-y:auto;
-  padding:72px 14px 80px;z-index:25
-}
+.tab-page{position:fixed;inset:0;top:0;max-width:430px;left:50%;transform:translateX(-50%);background:#F0F7F5;overflow-y:auto;padding:72px 14px 80px;z-index:25}
 .info-card{background:#FFFFFF;border:2px solid #B8D4CF;border-radius:14px;padding:16px;margin-bottom:12px}
-
-/* Driver found */
-.driver-card{
-  background:#1A4A42;border-radius:14px;
-  padding:18px;color:#FFFFFF;text-align:center;margin-bottom:14px
-}
+.driver-card{background:#1A4A42;border-radius:14px;padding:18px;color:#FFFFFF;text-align:center;margin-bottom:14px}
 .pulse-dot{width:10px;height:10px;border-radius:50%;background:#6ee7b7;display:inline-block;animation:blink 1.2s ease-in-out infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes spin{to{transform:rotate(360deg)}}
-.spinner{
-  width:28px;height:28px;
-  border:3px solid #E8F4F1;
-  border-top-color:#1A4A42;
-  border-radius:50%;animation:spin .8s linear infinite;
-  margin:0 auto 12px
-}
+.spinner{width:28px;height:28px;border:3px solid #E8F4F1;border-top-color:#1A4A42;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+.spinner-sm{width:16px;height:16px;border:2px solid #E8F4F1;border-top-color:#1A4A42;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
 
-/* Popular grid */
-.popular-btn{
-  background:#FFFFFF;border:2px solid #B8D4CF;border-radius:12px;
-  padding:14px;text-align:left;cursor:pointer;
-  font-family:'Plus Jakarta Sans',sans-serif;
-  transition:border-color .15s,background .15s;min-height:72px
+/* POI suggestion items */
+.poi-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;border-radius:12px;
+  border:2px solid #B8D4CF;background:#FFFFFF;
+  cursor:pointer;transition:border-color .15s,background .15s;
+  width:100%;font-family:'Plus Jakarta Sans',sans-serif;
+  min-height:60px;
 }
-.popular-btn:hover{border-color:#1A4A42;background:#E8F4F1}
+.poi-item:hover{border-color:#1A4A42;background:#E8F4F1}
+.poi-item.favorite{border-color:#D4A820;background:#FFFBF0}
+.poi-item.placeholder{opacity:.45;cursor:not-allowed;border-style:dashed}
+.poi-icon{width:36px;height:36px;border-radius:10px;background:#F0F7F5;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.poi-icon.fav{background:#FFF8E6}
+.poi-name{font-size:14px;font-weight:700;color:#0D2420;margin-bottom:1px;text-align:left}
+.poi-addr{font-size:11px;color:#5A7A76;font-weight:500;text-align:left}
+
+/* Section label */
+.section-lbl{font-size:10px;font-weight:700;color:#1A4A42;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;display:flex;align-items:center;gap:6px}
 `
 
 export default function PassengerDashboard() {
@@ -228,11 +160,17 @@ export default function PassengerDashboard() {
   const [dist, setDist] = useState(null)
   const [tip, setTip] = useState(0)
   const [step, setStep] = useState("idle")
-  const [showPopular, setShowPopular] = useState(false)
-  const [popularTarget, setPopularTarget] = useState(null)
+  const [showSheet, setShowSheet] = useState(false)
+  const [sheetTarget, setSheetTarget] = useState(null) // 'pickup' | 'dest'
   const [driverEta, setDriverEta] = useState(null)
   const [driverName, setDriverName] = useState("")
   const [showRating, setShowRating] = useState(false)
+
+  // Dynamic POI state
+  const [nearbyPOI, setNearbyPOI] = useState([])
+  const [gpsLoading, setGpsLoading] = useState(false)
+  const [userFavorites] = useState(DEFAULT_FAVORITES) // TODO: fetch from Supabase
+  const [currentGPS, setCurrentGPS] = useState(null)
 
   const ff = "'Plus Jakarta Sans',sans-serif"
   const ff2 = "'Sora',sans-serif"
@@ -262,6 +200,7 @@ export default function PassengerDashboard() {
       mapInst.current=map
       navigator.geolocation?.getCurrentPosition(pos=>{
         const{latitude:lat,longitude:lng}=pos.coords
+        setCurrentGPS({lat,lng})
         const el=document.createElement("div")
         el.style.cssText="width:16px;height:16px;border-radius:50%;background:#1A4A42;border:3px solid #FFFFFF;box-shadow:0 0 0 5px rgba(26,74,66,.25)"
         new mgl.Marker({element:el,anchor:"center"}).setLngLat([lng,lat]).addTo(map)
@@ -273,13 +212,41 @@ export default function PassengerDashboard() {
       const{lng,lat}=e.lngLat
       if(selectMode==="pickup"){
         setPickup({lat,lng});reverseGeocode(lat,lng,setPickupName)
-        addMarker(map,"pickup",lat,lng,mgl);setSelectMode(null);setShowPopular(false)
+        addMarker(map,"pickup",lat,lng,mgl);setSelectMode(null);setShowSheet(false)
       }else{
         setDest({lat,lng});reverseGeocode(lat,lng,setDestName)
-        addMarker(map,"dest",lat,lng,mgl);setSelectMode(null);setShowPopular(false)
+        addMarker(map,"dest",lat,lng,mgl);setSelectMode(null);setShowSheet(false)
       }
     })
   }
+
+  // ── Auto-trigger GPS + fetch POI saat sheet dibuka ──
+  const openSheet = useCallback((target) => {
+    setSheetTarget(target)
+    setShowSheet(true)
+    setSelectMode(target)
+    setNearbyPOI([]) // reset dulu
+
+    // Hanya fetch POI untuk pickup
+    if (target !== "pickup") return
+
+    setGpsLoading(true)
+    navigator.geolocation?.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords
+        setCurrentGPS({ lat, lng })
+        // Update peta ke posisi user
+        if (mapInst.current) {
+          mapInst.current.flyTo({ center: [lng, lat], zoom: 15 })
+        }
+        const pois = await fetchNearbyPOI(lat, lng)
+        setNearbyPOI(pois)
+        setGpsLoading(false)
+      },
+      () => setGpsLoading(false),
+      { enableHighAccuracy: true, timeout: 8000 }
+    )
+  }, [selectMode])
 
   const addMarker=(map,type,lat,lng,mgl)=>{
     if(type==="pickup"){
@@ -303,13 +270,22 @@ export default function PassengerDashboard() {
     }catch{setter(`${lat.toFixed(4)}, ${lng.toFixed(4)}`)}
   }
 
-  const selectPopular=(place,target)=>{
-    const mgl=window.mapboxgl
-    if(!mapInst.current||!mgl)return
-    if(target==="pickup"){setPickup({lat:place.lat,lng:place.lng});setPickupName(place.name);addMarker(mapInst.current,"pickup",place.lat,place.lng,mgl)}
-    else{setDest({lat:place.lat,lng:place.lng});setDestName(place.name);addMarker(mapInst.current,"dest",place.lat,place.lng,mgl)}
-    mapInst.current.flyTo({center:[place.lng,place.lat],zoom:15})
-    setShowPopular(false);setSelectMode(null)
+  const selectPOI = (place, target) => {
+    if (place.isPlaceholder) return
+    const mgl = window.mapboxgl
+    if (!mapInst.current || !mgl) return
+    if (target === "pickup") {
+      setPickup({ lat: place.lat, lng: place.lng })
+      setPickupName(place.name)
+      addMarker(mapInst.current, "pickup", place.lat, place.lng, mgl)
+    } else {
+      setDest({ lat: place.lat, lng: place.lng })
+      setDestName(place.name)
+      addMarker(mapInst.current, "dest", place.lat, place.lng, mgl)
+    }
+    mapInst.current.flyTo({ center: [place.lng, place.lat], zoom: 15 })
+    setShowSheet(false)
+    setSelectMode(null)
   }
 
   const hitungTarif=()=>{
@@ -334,8 +310,7 @@ export default function PassengerDashboard() {
   }
 
   const selesai=()=>setShowRating(true)
-
-  const submitRating=(r)=>{
+  const submitRating=()=>{
     setShowRating(false)
     setStep("idle");setPickup(null);setDest(null)
     setPickupName("");setDestName("");setFare(null);setDist(null);setTip(0)
@@ -343,11 +318,15 @@ export default function PassengerDashboard() {
 
   const total=(fare||0)+tip
 
+  // Gabung: POI dinamis (4) + favorit (2)
+  const sheetItems = sheetTarget === "pickup"
+    ? [...nearbyPOI.slice(0,4), ...userFavorites.slice(0,2)]
+    : userFavorites // untuk tujuan, hanya favorit + ketuk peta
+
   return(
     <div style={{fontFamily:ff,background:T.surface2,minHeight:"100vh",color:T.ink,position:"relative",maxWidth:430,margin:"0 auto"}}>
       <style>{CSS}</style>
 
-      {/* Peta — streets style lebih mudah dibaca outdoor */}
       <div ref={mapRef} style={{position:"fixed",inset:0,top:0,maxWidth:430,left:"50%",transform:"translateX(-50%)",zIndex:0}}/>
 
       {/* Header KSI */}
@@ -362,16 +341,11 @@ export default function PassengerDashboard() {
         </div>
       )}
 
-      {/* Hint mode pilih */}
+      {/* Hint tap peta */}
       {selectMode&&(
         <div style={{position:"fixed",top:68,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,zIndex:15,padding:"0 14px",pointerEvents:"none"}}>
-          <div style={{
-            background:selectMode==="pickup"?T.forest:T.terra,
-            color:"#FFFFFF",borderRadius:12,padding:"12px 18px",
-            textAlign:"center",fontSize:14,fontWeight:700,
-            boxShadow:"0 4px 20px rgba(0,0,0,.35)"
-          }}>
-            {selectMode==="pickup"?"📍 Ketuk peta — pilih lokasi jemput":"🏁 Ketuk peta — pilih tujuan"}
+          <div style={{background:selectMode==="pickup"?T.forest:T.terra,color:"#FFFFFF",borderRadius:12,padding:"12px 18px",textAlign:"center",fontSize:14,fontWeight:700,boxShadow:"0 4px 20px rgba(0,0,0,.35)"}}>
+            {selectMode==="pickup"?"📍 Atau ketuk peta langsung":"🏁 Atau ketuk peta langsung"}
           </div>
         </div>
       )}
@@ -380,34 +354,28 @@ export default function PassengerDashboard() {
       {tab==="home"&&(
         <div style={{position:"fixed",bottom:62,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,zIndex:10,padding:"0 14px"}}>
 
-          {/* IDLE */}
           {step==="idle"&&(
             <div className="card" style={{padding:16}}>
               <div style={{fontSize:11,color:T.forest,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:12}}>Mau ke mana?</div>
 
               <div className={`input-wrap ${selectMode==="pickup"?"active":""}`} style={{marginBottom:4}}
-                onClick={()=>{setSelectMode("pickup");setShowPopular(true);setPopularTarget("pickup")}}>
+                onClick={()=>openSheet("pickup")}>
                 <div style={{width:10,height:10,borderRadius:"50%",background:T.forest,flexShrink:0,border:`2px solid ${T.forestM}`}}/>
                 <div style={{flex:1}}>
                   <div className="input-label">Lokasi jemput</div>
-                  {pickupName
-                    ?<div className="input-val">{pickupName}</div>
-                    :<div className="input-placeholder">Pilih lokasi atau ketuk peta</div>}
+                  {pickupName?<div className="input-val">{pickupName}</div>:<div className="input-placeholder">Pilih lokasi jemput</div>}
                 </div>
                 {pickup&&<span style={{fontSize:18,color:T.forest}}>✓</span>}
               </div>
 
-              {/* Connector line */}
               <div style={{width:2,height:10,background:T.borderL,margin:"0 0 4px 20px"}}/>
 
               <div className={`input-wrap ${selectMode==="dest"?"active":""}`}
-                onClick={()=>{setSelectMode("dest");setShowPopular(true);setPopularTarget("dest")}}>
+                onClick={()=>openSheet("dest")}>
                 <div style={{width:10,height:10,borderRadius:2,background:T.terra,flexShrink:0,border:`2px solid ${T.terraD}`}}/>
                 <div style={{flex:1}}>
                   <div className="input-label" style={{color:T.terra}}>Tujuan</div>
-                  {destName
-                    ?<div className="input-val">{destName}</div>
-                    :<div className="input-placeholder">Pilih tujuan atau ketuk peta</div>}
+                  {destName?<div className="input-val">{destName}</div>:<div className="input-placeholder">Pilih tujuan</div>}
                 </div>
                 {dest&&<span style={{fontSize:18,color:T.terra}}>✓</span>}
               </div>
@@ -427,7 +395,6 @@ export default function PassengerDashboard() {
             </div>
           )}
 
-          {/* FARE */}
           {step==="fare"&&fare&&(
             <div className="card" style={{padding:16}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
@@ -441,7 +408,6 @@ export default function PassengerDashboard() {
                   <div style={{fontSize:12,fontWeight:700,color:T.forest,background:T.forestBg,padding:"3px 10px",borderRadius:20,border:`1.5px solid ${T.forest}`}}>≤ +20% ✓</div>
                 </div>
               </div>
-
               <div style={{marginBottom:14}}>
                 <div style={{fontSize:12,fontWeight:700,color:T.ink,marginBottom:10,textTransform:"uppercase",letterSpacing:".05em"}}>
                   Tip driver <span style={{color:T.ink3,fontWeight:500,textTransform:"none"}}>— opsional</span>
@@ -454,12 +420,10 @@ export default function PassengerDashboard() {
                   ))}
                 </div>
               </div>
-
               <div style={{background:T.forestBg,border:`2px solid ${T.forest}`,borderRadius:12,padding:"12px 16px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <span style={{fontSize:14,color:T.ink2,fontWeight:600}}>Total bayar</span>
                 <span style={{fontFamily:ff2,fontSize:26,fontWeight:700,color:T.forest}}>{`Rp ${total.toLocaleString("id-ID")}`}</span>
               </div>
-
               <div style={{display:"flex",gap:10}}>
                 <button className="btn-ghost" style={{flex:1}} onClick={()=>setStep("idle")}>← Ubah</button>
                 <button className="btn-cta" style={{flex:2}} onClick={pesanSekarang}>🛺 Pesan sekarang</button>
@@ -467,7 +431,6 @@ export default function PassengerDashboard() {
             </div>
           )}
 
-          {/* SEARCHING */}
           {step==="searching"&&(
             <div className="card" style={{padding:20,textAlign:"center"}}>
               <div className="spinner"/>
@@ -476,7 +439,6 @@ export default function PassengerDashboard() {
             </div>
           )}
 
-          {/* FOUND */}
           {step==="found"&&(
             <div className="card" style={{padding:16}}>
               <div className="driver-card">
@@ -495,7 +457,6 @@ export default function PassengerDashboard() {
             </div>
           )}
 
-          {/* RIDING */}
           {step==="riding"&&(
             <div className="card" style={{padding:16}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
@@ -518,31 +479,83 @@ export default function PassengerDashboard() {
         </div>
       )}
 
-      {/* POPULAR SHEET */}
-      {showPopular&&(
-        <div className="sheet-bg" onClick={()=>{setShowPopular(false);setSelectMode(null)}}>
+      {/* ── DYNAMIC LOCATION SHEET ── */}
+      {showSheet&&(
+        <div className="sheet-bg" onClick={()=>{setShowSheet(false);setSelectMode(null)}}>
           <div className="sheet" onClick={e=>e.stopPropagation()}>
-            <div style={{width:40,height:5,borderRadius:3,background:T.borderL,margin:"0 auto 18px"}}/>
+            <div style={{width:40,height:5,borderRadius:3,background:T.borderL,margin:"0 auto 16px"}}/>
+
             <div style={{fontFamily:ff2,fontSize:17,fontWeight:700,color:T.ink,marginBottom:4}}>
-              {popularTarget==="pickup"?"Pilih lokasi jemput":"Pilih tujuan"}
+              {sheetTarget==="pickup"?"Pilih lokasi jemput":"Pilih tujuan"}
             </div>
-            <div style={{fontSize:13,color:T.ink2,fontWeight:500,marginBottom:16}}>Pilih lokasi populer atau ketuk langsung di peta</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-              {POPULAR.map(p=>(
-                <button key={p.name} className="popular-btn" onClick={()=>selectPopular(p,popularTarget)}>
-                  <div style={{fontSize:22,marginBottom:6}}>{p.ic}</div>
-                  <div style={{fontSize:14,fontWeight:700,color:T.ink}}>{p.name}</div>
-                </button>
-              ))}
+            <div style={{fontSize:12,color:T.ink2,fontWeight:500,marginBottom:16}}>
+              {sheetTarget==="pickup"
+                ? "Tempat terdekat dari posisi kamu sekarang"
+                : "Pilih tujuan atau ketuk langsung di peta"}
             </div>
-            <button className="btn-primary" onClick={()=>setShowPopular(false)}>
-              📍 Ketuk peta untuk lokasi lain
+
+            {/* POI terdekat — hanya untuk pickup */}
+            {sheetTarget==="pickup"&&(
+              <div style={{marginBottom:16}}>
+                <div className="section-lbl">
+                  📍 Terdekat dari lokasimu
+                  {gpsLoading&&<span className="spinner-sm" style={{marginLeft:6}}/>}
+                </div>
+
+                {gpsLoading&&nearbyPOI.length===0&&(
+                  <div style={{padding:"12px 0",textAlign:"center",fontSize:13,color:T.ink3,fontWeight:500}}>
+                    Mencari tempat terdekat...
+                  </div>
+                )}
+
+                {nearbyPOI.length>0&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {nearbyPOI.map((p,i)=>(
+                      <button key={i} className="poi-item" onClick={()=>selectPOI(p,sheetTarget)}>
+                        <div className="poi-icon">{p.ic}</div>
+                        <div style={{flex:1}}>
+                          <div className="poi-name">{p.name}</div>
+                          {p.address&&<div className="poi-addr">{p.address}</div>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {!gpsLoading&&nearbyPOI.length===0&&(
+                  <div style={{padding:"10px 14px",background:T.forestBg,borderRadius:10,fontSize:12,color:T.ink2,fontWeight:500}}>
+                    Aktifkan GPS untuk melihat tempat terdekat
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Favorit user */}
+            <div style={{marginBottom:16}}>
+              <div className="section-lbl">⭐ Favorit kamu</div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {userFavorites.map((p,i)=>(
+                  <button key={i}
+                    className={`poi-item favorite ${p.isPlaceholder?"placeholder":""}`}
+                    onClick={()=>!p.isPlaceholder&&selectPOI(p,sheetTarget)}>
+                    <div className="poi-icon fav">{p.ic}</div>
+                    <div style={{flex:1}}>
+                      <div className="poi-name">{p.name}</div>
+                      <div className="poi-addr">{p.isPlaceholder?"Belum diatur — ketuk peta untuk pilih":"Lokasi tersimpan"}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button className="btn-primary" onClick={()=>setShowSheet(false)}>
+              🗺️ Ketuk peta untuk lokasi lain
             </button>
           </div>
         </div>
       )}
 
-      {/* RATING SHEET */}
+      {/* Rating sheet */}
       {showRating&&(
         <div className="sheet-bg">
           <div className="sheet" style={{textAlign:"center"}}>
@@ -562,7 +575,7 @@ export default function PassengerDashboard() {
         </div>
       )}
 
-      {/* RIWAYAT TAB */}
+      {/* Riwayat tab */}
       {tab==="riwayat"&&(
         <div className="tab-page">
           <div style={{background:T.forest,borderRadius:16,padding:"16px 18px",marginBottom:16,color:"#FFFFFF"}}>
@@ -593,7 +606,7 @@ export default function PassengerDashboard() {
         </div>
       )}
 
-      {/* PROFIL TAB */}
+      {/* Profil tab */}
       {tab==="profil"&&(
         <div className="tab-page">
           <div style={{background:T.forest,borderRadius:16,padding:"18px",marginBottom:16,display:"flex",gap:14,alignItems:"center",color:"#FFFFFF"}}>
@@ -616,7 +629,6 @@ export default function PassengerDashboard() {
         </div>
       )}
 
-      {/* NAV */}
       <nav className="nav-bar">
         {[{id:"home",ic:"🛺",lbl:"Pesan"},{id:"riwayat",ic:"🕐",lbl:"Riwayat"},{id:"profil",ic:"👤",lbl:"Profil"}].map(n=>(
           <div key={n.id} className={`nav-item ${tab===n.id?"active":""}`} onClick={()=>setTab(n.id)}>
