@@ -7,31 +7,35 @@ import { useState, useEffect, useRef } from "react"
 const MAPBOX_TOKEN = "pk.eyJ1Ijoicm9kYXRpZ2FqYWthcnRhIiwiYSI6ImNtb2kzajdxMTAycnYycnBuaXJ2ZnBkbjIifQ.BRtYhcrtisAEZWWyM0ShlA"
 const JAKARTA_CENTER = { lng: 106.8272, lat: -6.1751 }
 
+// Palet outdoor-ready — kontras tinggi untuk sinar matahari Indonesia
 const T = {
-  // Hijau sage
-  sage:    "#4A7C6F",
-  sageD:   "#2F5C52",
-  sageL:   "#6B9E92",
-  sageBg:  "#EDF4F2",
-  sageBg2: "#D6EAE6",
-  // Orange terakota
-  terra:   "#C45E3E",
-  terraD:  "#8F3E25",
-  terraBg: "#F8EDE8",
-  terraBg2:"#F0D9D0",
-  // Neutral
-  cream:   "#FDFAF6",
-  cream2:  "#F5EFE7",
-  cream3:  "#EAE0D5",
-  cream4:  "#D4C8BB",
-  ink:     "#1E2D2A",
-  ink2:    "#4A5E5A",
-  ink3:    "#8A9E9A",
-  card:    "#FFFFFF",
-  border:  "#E0D8CE",
-  warn:    "#C48A1A",
-  warnBg:  "#FBF4E3",
-  good:    "#4A7C59",
+  // Hijau forest — kontras 8:1+ di atas putih
+  forest:    "#1A4A42",
+  forestD:   "#0D2E28",
+  forestM:   "#2D6B5F",
+  forestBg:  "#E8F4F1",
+  forestBg2: "#F0F7F5",
+  // Terakota kuat — kontras 5:1+ di atas putih
+  terra:     "#B5421A",
+  terraD:    "#8F3314",
+  terraBg:   "#FAEAE4",
+  terraBg2:  "#F5D5C8",
+  // Teks
+  ink:       "#0D2420",
+  ink2:      "#2A4A45",
+  ink3:      "#5A7A76",
+  ink4:      "#8AA8A4",
+  // Surface
+  white:     "#FFFFFF",
+  surface:   "#F8FFFE",
+  surface2:  "#F0F7F5",
+  border:    "#1A4A42",
+  borderL:   "#B8D4CF",
+  // Semantik
+  warn:      "#8A5C00",
+  warnBg:    "#FFF8E6",
+  warnBdr:   "#D4A820",
+  good:      "#1A4A42",
 }
 
 const PEAK_HOURS = [{s:7,e:9},{s:11,e:13},{s:16,e:19}]
@@ -39,12 +43,12 @@ const BASE_FARES = [15000,25000,50000]
 const GOJEK_FARES = [18000,28000,55000]
 const TIPS = [0,2000,5000,10000,20000]
 const POPULAR = [
-  {name:"Blok M",      ic:"🏢",lat:-6.2441,lng:106.7989},
-  {name:"Sudirman",    ic:"🏙️",lat:-6.2088,lng:106.8230},
-  {name:"Monas",       ic:"🗼",lat:-6.1754,lng:106.8272},
-  {name:"Kemayoran",   ic:"✈️",lat:-6.1620,lng:106.8551},
-  {name:"Tanah Abang", ic:"🛍️",lat:-6.1863,lng:106.8114},
-  {name:"Senen",       ic:"🚉",lat:-6.1763,lng:106.8447},
+  {name:"Blok M",      ic:"🏢", lat:-6.2441, lng:106.7989},
+  {name:"Sudirman",    ic:"🏙️", lat:-6.2088, lng:106.8230},
+  {name:"Monas",       ic:"🗼", lat:-6.1754, lng:106.8272},
+  {name:"Kemayoran",   ic:"✈️", lat:-6.1620, lng:106.8551},
+  {name:"Tanah Abang", ic:"🛍️", lat:-6.1863, lng:106.8114},
+  {name:"Senen",       ic:"🚉", lat:-6.1763, lng:106.8447},
 ]
 
 function isPeak(){const h=new Date().getHours();return PEAK_HOURS.some(p=>h>=p.s&&h<p.e)}
@@ -60,62 +64,152 @@ function calcDist(a,b){
 }
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Sora:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 
-.btn-sage{background:#4A7C6F;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;width:100%;transition:background .15s,transform .1s;font-family:'Plus Jakarta Sans',sans-serif}
-.btn-sage:hover{background:#2F5C52}
-.btn-sage:active{transform:scale(.97)}
-.btn-sage:disabled{opacity:.5;cursor:not-allowed}
-.btn-terra{background:#C45E3E;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;width:100%;transition:background .15s,transform .1s;font-family:'Plus Jakarta Sans',sans-serif}
-.btn-terra:hover{background:#8F3E25}
-.btn-terra:active{transform:scale(.97)}
-.btn-ghost{background:#F5EFE7;border:1px solid #E0D8CE;border-radius:10px;color:#4A5E5A;padding:10px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:background .15s}
-.btn-ghost:hover{background:#EAE0D5}
+/* Tombol utama — hijau forest gelap, teks putih, kontras 8:1 */
+.btn-primary{
+  background:#1A4A42;color:#FFFFFF;border:none;border-radius:12px;
+  padding:16px;font-size:15px;font-weight:700;cursor:pointer;width:100%;
+  min-height:52px;transition:background .15s,transform .1s;
+  font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.01em
+}
+.btn-primary:hover{background:#0D2E28}
+.btn-primary:active{transform:scale(.97)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
 
-.glass{background:rgba(253,250,246,0.95);border:1px solid rgba(224,216,206,0.8);border-radius:16px;backdrop-filter:blur(20px) saturate(1.3)}
+/* Tombol CTA — terakota, teks putih */
+.btn-cta{
+  background:#B5421A;color:#FFFFFF;border:none;border-radius:12px;
+  padding:16px;font-size:15px;font-weight:700;cursor:pointer;width:100%;
+  min-height:52px;transition:background .15s,transform .1s;
+  font-family:'Plus Jakarta Sans',sans-serif
+}
+.btn-cta:hover{background:#8F3314}
+.btn-cta:active{transform:scale(.97)}
 
-.input-wrap{background:#F5EFE7;border:1.5px solid #E0D8CE;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .15s,background .15s}
-.input-wrap:hover,.input-wrap.active{border-color:#4A7C6F;background:#EDF4F2}
-.input-label{font-size:10px;color:#8A9E9A;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
-.input-val{font-size:13px;font-weight:600;color:#1E2D2A}
-.input-placeholder{font-size:13px;color:#D4C8BB}
+/* Tombol ghost — border tebal, teks gelap */
+.btn-ghost{
+  background:#FFFFFF;border:2px solid #1A4A42;border-radius:12px;
+  color:#0D2420;padding:14px 16px;font-size:14px;font-weight:600;
+  cursor:pointer;min-height:52px;transition:background .15s;
+  font-family:'Plus Jakarta Sans',sans-serif
+}
+.btn-ghost:hover{background:#E8F4F1}
 
-.tip-btn{padding:8px 12px;border-radius:8px;border:1.5px solid #E0D8CE;background:#fff;font-size:12px;font-weight:500;cursor:pointer;color:#1E2D2A;transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif}
-.tip-btn.active{background:#F0D9D0;border-color:#C45E3E;color:#8F3E25;font-weight:600}
+/* Card — putih bersih, border tegas */
+.card{
+  background:#FFFFFF;
+  border:2px solid #B8D4CF;
+  border-radius:16px;
+}
 
-.sheet-bg{position:fixed;inset:0;background:rgba(30,45,42,.65);z-index:40;display:flex;align-items:flex-end;justify-content:center}
-.sheet{width:100%;max-width:430px;background:#FDFAF6;border-radius:20px 20px 0 0;padding:20px;max-height:88vh;overflow-y:auto;animation:slideUp .3s cubic-bezier(.34,1.56,.64,1)}
+/* Input — border tebal, teks gelap */
+.input-wrap{
+  background:#FFFFFF;border:2px solid #B8D4CF;border-radius:12px;
+  padding:14px 16px;display:flex;align-items:center;gap:12px;
+  cursor:pointer;transition:border-color .15s;min-height:64px
+}
+.input-wrap:hover{border-color:#1A4A42}
+.input-wrap.active{border-color:#1A4A42;background:#E8F4F1}
+.input-label{
+  font-size:11px;color:#1A4A42;font-weight:700;
+  text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px
+}
+.input-val{font-size:14px;font-weight:700;color:#0D2420;line-height:1.3}
+.input-placeholder{font-size:14px;color:#8AA8A4}
+
+/* Tip button */
+.tip-btn{
+  padding:10px 14px;border-radius:10px;border:2px solid #B8D4CF;
+  background:#FFFFFF;font-size:13px;font-weight:600;cursor:pointer;
+  color:#0D2420;transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif;
+  min-height:44px
+}
+.tip-btn.active{background:#F5D5C8;border-color:#B5421A;color:#8F3314}
+
+/* Sheet bottom */
+.sheet-bg{position:fixed;inset:0;background:rgba(13,36,32,.75);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{
+  width:100%;max-width:430px;background:#FFFFFF;
+  border-radius:20px 20px 0 0;padding:20px;
+  max-height:88vh;overflow-y:auto;
+  animation:slideUp .3s cubic-bezier(.34,1.56,.64,1);
+  border-top:3px solid #1A4A42
+}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 
-.header-bar{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:20;background:linear-gradient(135deg,#2F5C52,#4A7C6F);padding:14px 16px 12px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 16px rgba(47,92,82,.3)}
-.header-logo{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid rgba(255,255,255,.2)}
-.header-title{font-family:'Sora',sans-serif;font-size:13px;font-weight:700;color:#fff;line-height:1.2}
-.header-sub{font-size:10px;color:rgba(255,255,255,.7);font-weight:400}
-.header-badge{margin-left:auto;background:rgba(196,94,62,.9);color:#fff;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600}
+/* Header */
+.header-bar{
+  position:fixed;top:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;z-index:20;
+  background:#1A4A42;
+  padding:14px 16px 13px;display:flex;align-items:center;gap:12px;
+}
+.header-logo{
+  width:38px;height:38px;border-radius:10px;
+  background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;border:1.5px solid rgba(255,255,255,.3)
+}
+.header-title{font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#FFFFFF;line-height:1.2}
+.header-sub{font-size:11px;color:rgba(255,255,255,.8);font-weight:500}
+.header-badge{
+  margin-left:auto;background:#B5421A;color:#FFFFFF;
+  padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700
+}
 
-.stat-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #E0D8CE;font-size:13px}
+/* Stat rows */
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1.5px solid #E8F4F1;font-size:14px}
 .stat-row:last-child{border-bottom:none}
 
-.nav-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(253,250,246,.97);border-top:1px solid #E0D8CE;display:flex;justify-content:space-around;padding:10px 0 18px;z-index:30;backdrop-filter:blur(20px)}
-.nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 14px}
-.nav-ic{font-size:19px;opacity:.25;transition:opacity .2s}
-.nav-lbl{font-size:10px;color:#8A9E9A;font-weight:500}
+/* Nav */
+.nav-bar{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;
+  background:#FFFFFF;border-top:2px solid #1A4A42;
+  display:flex;justify-content:space-around;
+  padding:10px 0 18px;z-index:30
+}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 16px;min-width:60px}
+.nav-ic{font-size:22px;opacity:.2;transition:opacity .2s}
+.nav-lbl{font-size:11px;color:#8AA8A4;font-weight:600}
 .nav-item.active .nav-ic{opacity:1}
-.nav-item.active .nav-lbl{color:#4A7C6F}
+.nav-item.active .nav-lbl{color:#1A4A42}
 
-.tab-page{position:fixed;inset:0;top:0;max-width:430px;left:50%;transform:translateX(-50%);background:#F5EFE7;overflow-y:auto;padding:72px 14px 80px;z-index:25}
-.eyebrow{font-size:10px;color:#8A9E9A;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
-.page-title{font-family:'Sora',sans-serif;font-size:22px;font-weight:700;color:#1E2D2A;margin-bottom:18px}
-.info-card{background:#fff;border:1px solid #E0D8CE;border-radius:14px;padding:14px;margin-bottom:12px}
-.info-box-sage{background:#EDF4F2;border:1px solid rgba(74,124,111,.2);border-radius:10px;padding:12px 14px;font-size:12px;color:#2F5C52;line-height:1.7}
-.info-box-terra{background:#F8EDE8;border:1px solid rgba(196,94,62,.2);border-radius:10px;padding:12px 14px;font-size:12px;color:#8F3E25;line-height:1.7}
+/* Tab pages */
+.tab-page{
+  position:fixed;inset:0;top:0;max-width:430px;
+  left:50%;transform:translateX(-50%);
+  background:#F0F7F5;overflow-y:auto;
+  padding:72px 14px 80px;z-index:25
+}
+.info-card{background:#FFFFFF;border:2px solid #B8D4CF;border-radius:14px;padding:16px;margin-bottom:12px}
 
-.driver-card{background:linear-gradient(135deg,#2F5C52,#4A7C6F);border-radius:16px;padding:18px;color:#fff;text-align:center;margin-bottom:14px}
-.pulse-dot{width:8px;height:8px;border-radius:50%;background:#6ee7b7;display:inline-block;animation:blink 1.2s ease-in-out infinite}
+/* Driver found */
+.driver-card{
+  background:#1A4A42;border-radius:14px;
+  padding:18px;color:#FFFFFF;text-align:center;margin-bottom:14px
+}
+.pulse-dot{width:10px;height:10px;border-radius:50%;background:#6ee7b7;display:inline-block;animation:blink 1.2s ease-in-out infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes spin{to{transform:rotate(360deg)}}
-.spinner{width:24px;height:24px;border:3px solid rgba(74,124,111,.2);border-top-color:#4A7C6F;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+.spinner{
+  width:28px;height:28px;
+  border:3px solid #E8F4F1;
+  border-top-color:#1A4A42;
+  border-radius:50%;animation:spin .8s linear infinite;
+  margin:0 auto 12px
+}
+
+/* Popular grid */
+.popular-btn{
+  background:#FFFFFF;border:2px solid #B8D4CF;border-radius:12px;
+  padding:14px;text-align:left;cursor:pointer;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  transition:border-color .15s,background .15s;min-height:72px
+}
+.popular-btn:hover{border-color:#1A4A42;background:#E8F4F1}
 `
 
 export default function PassengerDashboard() {
@@ -138,7 +232,6 @@ export default function PassengerDashboard() {
   const [popularTarget, setPopularTarget] = useState(null)
   const [driverEta, setDriverEta] = useState(null)
   const [driverName, setDriverName] = useState("")
-  const [rating, setUserRating] = useState(0)
   const [showRating, setShowRating] = useState(false)
 
   const ff = "'Plus Jakarta Sans',sans-serif"
@@ -161,7 +254,7 @@ export default function PassengerDashboard() {
     mgl.accessToken=MAPBOX_TOKEN
     const map=new mgl.Map({
       container:mapRef.current,
-      style:"mapbox://styles/mapbox/light-v11",
+      style:"mapbox://styles/mapbox/streets-v12",
       center:[JAKARTA_CENTER.lng,JAKARTA_CENTER.lat],
       zoom:13,attributionControl:false
     })
@@ -170,9 +263,9 @@ export default function PassengerDashboard() {
       navigator.geolocation?.getCurrentPosition(pos=>{
         const{latitude:lat,longitude:lng}=pos.coords
         const el=document.createElement("div")
-        el.style.cssText="width:14px;height:14px;border-radius:50%;background:#4A7C6F;border:3px solid #fff;box-shadow:0 0 0 5px rgba(74,124,111,.2)"
+        el.style.cssText="width:16px;height:16px;border-radius:50%;background:#1A4A42;border:3px solid #FFFFFF;box-shadow:0 0 0 5px rgba(26,74,66,.25)"
         new mgl.Marker({element:el,anchor:"center"}).setLngLat([lng,lat]).addTo(map)
-        map.flyTo({center:[lng,lat],zoom:14})
+        map.flyTo({center:[lng,lat],zoom:15})
       })
     })
     map.on("click",e=>{
@@ -192,12 +285,12 @@ export default function PassengerDashboard() {
     if(type==="pickup"){
       pickupMk.current?.remove()
       const el=document.createElement("div")
-      el.innerHTML=`<div style="background:#4A7C6F;color:#fff;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 2px 10px rgba(47,92,82,.35)">📍 Jemput</div>`
+      el.innerHTML=`<div style="background:#1A4A42;color:#FFFFFF;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 3px 12px rgba(13,36,32,.4)">📍 Jemput</div>`
       pickupMk.current=new mgl.Marker({element:el,anchor:"bottom"}).setLngLat([lng,lat]).addTo(map)
     }else{
       destMk.current?.remove()
       const el=document.createElement("div")
-      el.innerHTML=`<div style="background:#C45E3E;color:#fff;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 2px 10px rgba(196,94,62,.35)">🏁 Tujuan</div>`
+      el.innerHTML=`<div style="background:#B5421A;color:#FFFFFF;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 3px 12px rgba(139,51,20,.4)">🏁 Tujuan</div>`
       destMk.current=new mgl.Marker({element:el,anchor:"bottom"}).setLngLat([lng,lat]).addTo(map)
     }
   }
@@ -240,12 +333,9 @@ export default function PassengerDashboard() {
     },3000)
   }
 
-  const selesai=()=>{
-    setShowRating(true)
-  }
+  const selesai=()=>setShowRating(true)
 
   const submitRating=(r)=>{
-    setUserRating(r)
     setShowRating(false)
     setStep("idle");setPickup(null);setDest(null)
     setPickupName("");setDestName("");setFare(null);setDist(null);setTip(0)
@@ -254,13 +344,13 @@ export default function PassengerDashboard() {
   const total=(fare||0)+tip
 
   return(
-    <div style={{fontFamily:ff,background:T.cream2,minHeight:"100vh",color:T.ink,position:"relative",maxWidth:430,margin:"0 auto"}}>
+    <div style={{fontFamily:ff,background:T.surface2,minHeight:"100vh",color:T.ink,position:"relative",maxWidth:430,margin:"0 auto"}}>
       <style>{CSS}</style>
 
-      {/* Map */}
+      {/* Peta — streets style lebih mudah dibaca outdoor */}
       <div ref={mapRef} style={{position:"fixed",inset:0,top:0,maxWidth:430,left:"50%",transform:"translateX(-50%)",zIndex:0}}/>
 
-      {/* Header */}
+      {/* Header KSI */}
       {tab==="home"&&(
         <div className="header-bar">
           <div className="header-logo">🛺</div>
@@ -268,59 +358,70 @@ export default function PassengerDashboard() {
             <div className="header-title">Koperasi Syarikat Islam</div>
             <div className="header-sub">Bajaj Listrik Jakarta</div>
           </div>
-          {isPeak()&&<div className="header-badge">⚡ Peak Hour</div>}
+          {isPeak()&&<div className="header-badge">⚡ Peak</div>}
         </div>
       )}
 
-      {/* Select mode hint */}
+      {/* Hint mode pilih */}
       {selectMode&&(
-        <div style={{position:"fixed",top:70,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,zIndex:15,padding:"0 14px",pointerEvents:"none"}}>
-          <div style={{background:selectMode==="pickup"?T.sage:T.terra,color:"#fff",borderRadius:12,padding:"10px 16px",textAlign:"center",fontSize:13,fontWeight:600,boxShadow:"0 4px 16px rgba(0,0,0,.2)"}}>
-            {selectMode==="pickup"?"📍 Ketuk peta untuk lokasi jemput":"🏁 Ketuk peta untuk tujuan"}
+        <div style={{position:"fixed",top:68,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,zIndex:15,padding:"0 14px",pointerEvents:"none"}}>
+          <div style={{
+            background:selectMode==="pickup"?T.forest:T.terra,
+            color:"#FFFFFF",borderRadius:12,padding:"12px 18px",
+            textAlign:"center",fontSize:14,fontWeight:700,
+            boxShadow:"0 4px 20px rgba(0,0,0,.35)"
+          }}>
+            {selectMode==="pickup"?"📍 Ketuk peta — pilih lokasi jemput":"🏁 Ketuk peta — pilih tujuan"}
           </div>
         </div>
       )}
 
-      {/* HOME TAB */}
+      {/* HOME HUD */}
       {tab==="home"&&(
         <div style={{position:"fixed",bottom:62,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,zIndex:10,padding:"0 14px"}}>
 
           {/* IDLE */}
           {step==="idle"&&(
-            <div className="glass" style={{padding:16}}>
-              <div style={{fontSize:10,color:T.ink3,textTransform:"uppercase",letterSpacing:".08em",marginBottom:10,fontWeight:600}}>Mau ke mana?</div>
+            <div className="card" style={{padding:16}}>
+              <div style={{fontSize:11,color:T.forest,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:12}}>Mau ke mana?</div>
 
-              <div className={`input-wrap ${selectMode==="pickup"?"active":""}`} style={{marginBottom:8}}
+              <div className={`input-wrap ${selectMode==="pickup"?"active":""}`} style={{marginBottom:4}}
                 onClick={()=>{setSelectMode("pickup");setShowPopular(true);setPopularTarget("pickup")}}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:T.sage,flexShrink:0}}/>
+                <div style={{width:10,height:10,borderRadius:"50%",background:T.forest,flexShrink:0,border:`2px solid ${T.forestM}`}}/>
                 <div style={{flex:1}}>
                   <div className="input-label">Lokasi jemput</div>
-                  {pickupName?<div className="input-val">{pickupName}</div>:<div className="input-placeholder">Pilih lokasi atau ketuk peta</div>}
+                  {pickupName
+                    ?<div className="input-val">{pickupName}</div>
+                    :<div className="input-placeholder">Pilih lokasi atau ketuk peta</div>}
                 </div>
-                {pickup&&<span style={{fontSize:14,color:T.sage}}>✓</span>}
+                {pickup&&<span style={{fontSize:18,color:T.forest}}>✓</span>}
               </div>
 
-              <div style={{width:1,height:8,background:T.cream3,margin:"0 0 0 18px"}}/>
+              {/* Connector line */}
+              <div style={{width:2,height:10,background:T.borderL,margin:"0 0 4px 20px"}}/>
 
               <div className={`input-wrap ${selectMode==="dest"?"active":""}`}
                 onClick={()=>{setSelectMode("dest");setShowPopular(true);setPopularTarget("dest")}}>
-                <div style={{width:8,height:8,borderRadius:2,background:T.terra,flexShrink:0}}/>
+                <div style={{width:10,height:10,borderRadius:2,background:T.terra,flexShrink:0,border:`2px solid ${T.terraD}`}}/>
                 <div style={{flex:1}}>
-                  <div className="input-label">Tujuan</div>
-                  {destName?<div className="input-val">{destName}</div>:<div className="input-placeholder">Pilih tujuan atau ketuk peta</div>}
+                  <div className="input-label" style={{color:T.terra}}>Tujuan</div>
+                  {destName
+                    ?<div className="input-val">{destName}</div>
+                    :<div className="input-placeholder">Pilih tujuan atau ketuk peta</div>}
                 </div>
-                {dest&&<span style={{fontSize:14,color:T.terra}}>✓</span>}
+                {dest&&<span style={{fontSize:18,color:T.terra}}>✓</span>}
               </div>
 
               {pickup&&dest&&(
-                <button className="btn-sage" style={{marginTop:12}} onClick={hitungTarif}>
+                <button className="btn-primary" style={{marginTop:14}} onClick={hitungTarif}>
                   Lihat estimasi tarif →
                 </button>
               )}
 
               {isPeak()&&(
-                <div style={{marginTop:10,background:T.warnBg,border:`1px solid rgba(196,138,26,.2)`,borderRadius:8,padding:"8px 12px",fontSize:11,color:T.warn,display:"flex",gap:6,alignItems:"center"}}>
-                  <span>⚡</span><span>Peak hour aktif — tarif sedikit lebih tinggi dari biasanya</span>
+                <div style={{marginTop:12,background:T.warnBg,border:`2px solid ${T.warnBdr}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:T.warn,fontWeight:600,display:"flex",gap:8,alignItems:"center"}}>
+                  <span style={{fontSize:16}}>⚡</span>
+                  <span>Peak hour — tarif sedikit lebih tinggi</span>
                 </div>
               )}
             </div>
@@ -328,22 +429,24 @@ export default function PassengerDashboard() {
 
           {/* FARE */}
           {step==="fare"&&fare&&(
-            <div className="glass" style={{padding:16}}>
+            <div className="card" style={{padding:16}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
                 <div>
-                  <div style={{fontSize:10,color:T.ink3,textTransform:"uppercase",letterSpacing:".08em",marginBottom:3}}>Estimasi tarif</div>
-                  <div style={{fontFamily:ff2,fontSize:30,fontWeight:700,color:T.terra}}>Rp {fare.toLocaleString("id-ID")}</div>
-                  <div style={{fontSize:12,color:T.ink3,marginTop:2}}>{dist?.toFixed(1)} km · ~{Math.round((dist||0)/25*60)} menit</div>
+                  <div style={{fontSize:11,color:T.ink3,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Estimasi tarif</div>
+                  <div style={{fontFamily:ff2,fontSize:34,fontWeight:700,color:T.terra,lineHeight:1}}>{`Rp ${fare.toLocaleString("id-ID")}`}</div>
+                  <div style={{fontSize:13,color:T.ink2,fontWeight:600,marginTop:4}}>{dist?.toFixed(1)} km · ~{Math.round((dist||0)/25*60)} menit</div>
                 </div>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:11,color:T.ink3,marginBottom:4}}>Maks vs Gojek</div>
-                  <div style={{fontSize:11,fontWeight:600,color:T.sage}}>≤ +20% ✓</div>
+                <div style={{textAlign:"right",paddingTop:4}}>
+                  <div style={{fontSize:11,color:T.ink3,fontWeight:600,marginBottom:3}}>vs Gojek</div>
+                  <div style={{fontSize:12,fontWeight:700,color:T.forest,background:T.forestBg,padding:"3px 10px",borderRadius:20,border:`1.5px solid ${T.forest}`}}>≤ +20% ✓</div>
                 </div>
               </div>
 
-              <div style={{marginBottom:12}}>
-                <div style={{fontSize:12,fontWeight:600,color:T.ink,marginBottom:8}}>Tip untuk driver <span style={{color:T.ink3,fontWeight:400}}>(opsional)</span></div>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:12,fontWeight:700,color:T.ink,marginBottom:10,textTransform:"uppercase",letterSpacing:".05em"}}>
+                  Tip driver <span style={{color:T.ink3,fontWeight:500,textTransform:"none"}}>— opsional</span>
+                </div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {TIPS.map(t=>(
                     <button key={t} className={`tip-btn ${tip===t?"active":""}`} onClick={()=>setTip(t)}>
                       {t===0?"Tanpa tip":`+Rp ${t.toLocaleString("id-ID")}`}
@@ -352,63 +455,64 @@ export default function PassengerDashboard() {
                 </div>
               </div>
 
-              <div style={{background:T.sageBg,border:`1px solid rgba(74,124,111,.2)`,borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <span style={{fontSize:13,color:T.ink2,fontWeight:500}}>Total bayar</span>
-                <span style={{fontFamily:ff2,fontSize:22,fontWeight:700,color:T.sage}}>Rp {total.toLocaleString("id-ID")}</span>
+              <div style={{background:T.forestBg,border:`2px solid ${T.forest}`,borderRadius:12,padding:"12px 16px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:14,color:T.ink2,fontWeight:600}}>Total bayar</span>
+                <span style={{fontFamily:ff2,fontSize:26,fontWeight:700,color:T.forest}}>{`Rp ${total.toLocaleString("id-ID")}`}</span>
               </div>
 
-              <div style={{display:"flex",gap:8}}>
+              <div style={{display:"flex",gap:10}}>
                 <button className="btn-ghost" style={{flex:1}} onClick={()=>setStep("idle")}>← Ubah</button>
-                <button className="btn-terra" style={{flex:2}} onClick={pesanSekarang}>🛺 Pesan sekarang</button>
+                <button className="btn-cta" style={{flex:2}} onClick={pesanSekarang}>🛺 Pesan sekarang</button>
               </div>
             </div>
           )}
 
           {/* SEARCHING */}
           {step==="searching"&&(
-            <div className="glass" style={{padding:20,textAlign:"center"}}>
+            <div className="card" style={{padding:20,textAlign:"center"}}>
               <div className="spinner"/>
-              <div style={{fontFamily:ff2,fontSize:15,fontWeight:700,color:T.ink,marginBottom:4}}>Mencari driver terdekat...</div>
-              <div style={{fontSize:12,color:T.ink3}}>Mohon tunggu sebentar</div>
+              <div style={{fontFamily:ff2,fontSize:16,fontWeight:700,color:T.ink,marginBottom:6}}>Mencari driver terdekat...</div>
+              <div style={{fontSize:13,color:T.ink2,fontWeight:500}}>Mohon tunggu sebentar</div>
             </div>
           )}
 
           {/* FOUND */}
           {step==="found"&&(
-            <div className="glass" style={{padding:16}}>
+            <div className="card" style={{padding:16}}>
               <div className="driver-card">
-                <div style={{fontSize:30,marginBottom:8}}>🛺</div>
-                <div style={{fontFamily:ff2,fontSize:17,fontWeight:700,marginBottom:4}}>Driver ditemukan!</div>
-                <div style={{fontSize:13,opacity:.85,marginBottom:8}}>{driverName} · menuju dalam {driverEta} menit</div>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                <div style={{fontSize:32,marginBottom:8}}>🛺</div>
+                <div style={{fontFamily:ff2,fontSize:18,fontWeight:700,marginBottom:4}}>Driver ditemukan!</div>
+                <div style={{fontSize:14,fontWeight:600,opacity:.9,marginBottom:10}}>{driverName} · {driverEta} menit lagi</div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                   <div className="pulse-dot"/>
-                  <span style={{fontSize:11,opacity:.8}}>Sedang menuju lokasi jemput</span>
+                  <span style={{fontSize:12,opacity:.85,fontWeight:500}}>Sedang menuju lokasi jemput</span>
                 </div>
               </div>
-              <div style={{display:"flex",gap:8}}>
+              <div style={{display:"flex",gap:10}}>
                 <button className="btn-ghost" style={{flex:1}}>📞 Hubungi</button>
-                <button className="btn-sage" style={{flex:2}} onClick={()=>setStep("riding")}>✓ Oke, tunggu</button>
+                <button className="btn-primary" style={{flex:2}} onClick={()=>setStep("riding")}>✓ Oke, tunggu</button>
               </div>
             </div>
           )}
 
           {/* RIDING */}
           {step==="riding"&&(
-            <div className="glass" style={{padding:16}}>
-              <div style={{fontSize:10,fontWeight:600,color:T.sage,textTransform:"uppercase",letterSpacing:".06em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-                <div className="pulse-dot"/><span>Perjalanan berlangsung</span>
+            <div className="card" style={{padding:16}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                <div className="pulse-dot"/>
+                <span style={{fontSize:12,fontWeight:700,color:T.forest,textTransform:"uppercase",letterSpacing:".06em"}}>Perjalanan berlangsung</span>
               </div>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
                 <div>
-                  <div style={{fontSize:15,fontWeight:600,color:T.ink}}>{driverName}</div>
-                  <div style={{fontSize:12,color:T.ink3}}>→ {destName}</div>
+                  <div style={{fontSize:16,fontWeight:700,color:T.ink}}>{driverName}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:T.ink2,marginTop:2}}>→ {destName}</div>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontFamily:ff2,fontSize:20,fontWeight:700,color:T.terra}}>Rp {total.toLocaleString("id-ID")}</div>
-                  {tip>0&&<div style={{fontSize:11,color:T.warn}}>incl. tip Rp {tip.toLocaleString("id-ID")}</div>}
+                  <div style={{fontFamily:ff2,fontSize:22,fontWeight:700,color:T.terra}}>{`Rp ${total.toLocaleString("id-ID")}`}</div>
+                  {tip>0&&<div style={{fontSize:12,fontWeight:600,color:T.warn}}>incl. tip Rp {tip.toLocaleString("id-ID")}</div>}
                 </div>
               </div>
-              <button className="btn-sage" onClick={selesai}>✅ Selesai & beri rating</button>
+              <button className="btn-primary" onClick={selesai}>✅ Selesai & beri rating</button>
             </div>
           )}
         </div>
@@ -418,21 +522,20 @@ export default function PassengerDashboard() {
       {showPopular&&(
         <div className="sheet-bg" onClick={()=>{setShowPopular(false);setSelectMode(null)}}>
           <div className="sheet" onClick={e=>e.stopPropagation()}>
-            <div style={{width:36,height:4,borderRadius:2,background:T.cream3,margin:"0 auto 16px"}}/>
-            <div style={{fontFamily:ff2,fontSize:16,fontWeight:700,color:T.ink,marginBottom:4}}>
+            <div style={{width:40,height:5,borderRadius:3,background:T.borderL,margin:"0 auto 18px"}}/>
+            <div style={{fontFamily:ff2,fontSize:17,fontWeight:700,color:T.ink,marginBottom:4}}>
               {popularTarget==="pickup"?"Pilih lokasi jemput":"Pilih tujuan"}
             </div>
-            <div style={{fontSize:12,color:T.ink3,marginBottom:14}}>Lokasi populer Jakarta atau ketuk langsung di peta</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+            <div style={{fontSize:13,color:T.ink2,fontWeight:500,marginBottom:16}}>Pilih lokasi populer atau ketuk langsung di peta</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
               {POPULAR.map(p=>(
-                <button key={p.name} onClick={()=>selectPopular(p,popularTarget)}
-                  style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:12,padding:"12px",textAlign:"left",cursor:"pointer",fontFamily:ff,transition:"all .15s"}}>
-                  <div style={{fontSize:20,marginBottom:6}}>{p.ic}</div>
-                  <div style={{fontSize:13,fontWeight:600,color:T.ink}}>{p.name}</div>
+                <button key={p.name} className="popular-btn" onClick={()=>selectPopular(p,popularTarget)}>
+                  <div style={{fontSize:22,marginBottom:6}}>{p.ic}</div>
+                  <div style={{fontSize:14,fontWeight:700,color:T.ink}}>{p.name}</div>
                 </button>
               ))}
             </div>
-            <button className="btn-sage" onClick={()=>{setShowPopular(false)}}>
+            <button className="btn-primary" onClick={()=>setShowPopular(false)}>
               📍 Ketuk peta untuk lokasi lain
             </button>
           </div>
@@ -443,17 +546,15 @@ export default function PassengerDashboard() {
       {showRating&&(
         <div className="sheet-bg">
           <div className="sheet" style={{textAlign:"center"}}>
-            <div style={{fontSize:40,marginBottom:8}}>⭐</div>
-            <div style={{fontFamily:ff2,fontSize:18,fontWeight:700,color:T.ink,marginBottom:4}}>Beri rating driver</div>
-            <div style={{fontSize:13,color:T.ink3,marginBottom:20}}>{driverName}</div>
-            <div style={{display:"flex",justifyContent:"center",gap:12,marginBottom:20}}>
+            <div style={{fontSize:44,marginBottom:10}}>⭐</div>
+            <div style={{fontFamily:ff2,fontSize:20,fontWeight:700,color:T.ink,marginBottom:4}}>Beri rating driver</div>
+            <div style={{fontSize:14,fontWeight:600,color:T.ink2,marginBottom:24}}>{driverName}</div>
+            <div style={{display:"flex",justifyContent:"center",gap:14,marginBottom:24}}>
               {[1,2,3,4,5].map(s=>(
                 <button key={s} onClick={()=>submitRating(s)}
-                  style={{fontSize:36,background:"none",border:"none",cursor:"pointer",opacity:s<=rating?1:.3,transition:"opacity .15s,transform .15s"}}
-                  onMouseEnter={e=>e.target.style.transform="scale(1.2)"}
-                  onMouseLeave={e=>e.target.style.transform="scale(1)"}>
-                  ⭐
-                </button>
+                  style={{fontSize:40,background:"none",border:"none",cursor:"pointer",transition:"transform .15s",minWidth:44,minHeight:44}}
+                  onMouseEnter={e=>(e.target.style.transform="scale(1.25)")}
+                  onMouseLeave={e=>(e.target.style.transform="scale(1)")}>⭐</button>
               ))}
             </div>
             <button className="btn-ghost" style={{width:"100%"}} onClick={()=>submitRating(5)}>Lewati</button>
@@ -463,11 +564,11 @@ export default function PassengerDashboard() {
 
       {/* RIWAYAT TAB */}
       {tab==="riwayat"&&(
-        <div className="tab-page" style={{paddingTop:72}}>
-          <div style={{background:"linear-gradient(135deg,#2F5C52,#4A7C6F)",borderRadius:20,padding:"16px 18px",marginBottom:16,color:"#fff"}}>
-            <div style={{fontSize:11,opacity:.75,textTransform:"uppercase",letterSpacing:".06em",marginBottom:4}}>Koperasi Syarikat Islam</div>
-            <div style={{fontFamily:ff2,fontSize:13,fontWeight:700,marginBottom:2}}>Riwayat Perjalanan</div>
-            <div style={{fontSize:11,opacity:.7}}>3 trip · Total Rp 62.000</div>
+        <div className="tab-page">
+          <div style={{background:T.forest,borderRadius:16,padding:"16px 18px",marginBottom:16,color:"#FFFFFF"}}>
+            <div style={{fontSize:11,opacity:.8,textTransform:"uppercase",letterSpacing:".06em",fontWeight:700,marginBottom:4}}>Koperasi Syarikat Islam</div>
+            <div style={{fontFamily:ff2,fontSize:16,fontWeight:700,marginBottom:2}}>Riwayat Perjalanan</div>
+            <div style={{fontSize:13,fontWeight:600,opacity:.85}}>3 trip · Total Rp 62.000</div>
           </div>
           {[
             {dest:"Blok M",dist:"3.2",fare:15000,tip:5000,date:"Hari ini, 11:24",driver:"Ahmad R."},
@@ -475,21 +576,18 @@ export default function PassengerDashboard() {
             {dest:"Monas",dist:"2.1",fare:15000,tip:2000,date:"Senin, 16:40",driver:"Doni P."},
           ].map((r,i)=>(
             <div key={i} className="info-card">
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                 <div>
-                  <div style={{fontSize:14,fontWeight:600,color:T.ink}}>→ {r.dest}</div>
-                  <div style={{fontSize:11,color:T.ink3}}>{r.dist} km · {r.date}</div>
-                  <div style={{fontSize:11,color:T.ink3}}>Driver: {r.driver}</div>
+                  <div style={{fontSize:15,fontWeight:700,color:T.ink}}>→ {r.dest}</div>
+                  <div style={{fontSize:12,fontWeight:600,color:T.ink2,marginTop:2}}>{r.dist} km · {r.date}</div>
+                  <div style={{fontSize:12,color:T.ink3,marginTop:1}}>Driver: {r.driver}</div>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontFamily:ff2,fontSize:16,fontWeight:700,color:T.terra}}>Rp {(r.fare+r.tip).toLocaleString("id-ID")}</div>
-                  {r.tip>0&&<div style={{fontSize:10,color:T.warn}}>+tip Rp {r.tip.toLocaleString("id-ID")}</div>}
+                  <div style={{fontFamily:ff2,fontSize:18,fontWeight:700,color:T.terra}}>{`Rp ${(r.fare+r.tip).toLocaleString("id-ID")}`}</div>
+                  {r.tip>0&&<div style={{fontSize:12,fontWeight:600,color:T.warn}}>+tip Rp {r.tip.toLocaleString("id-ID")}</div>}
                 </div>
               </div>
-              <div style={{paddingTop:6,borderTop:`1px solid ${T.border}`,display:"flex",gap:6}}>
-                <span style={{fontSize:11,color:T.sage}}>⭐⭐⭐⭐⭐</span>
-                <span style={{fontSize:11,color:T.ink3}}>Perjalanan selesai</span>
-              </div>
+              <div style={{paddingTop:8,borderTop:`1.5px solid ${T.forestBg}`,fontSize:12,fontWeight:600,color:T.forest}}>⭐⭐⭐⭐⭐ Selesai</div>
             </div>
           ))}
         </div>
@@ -497,38 +595,36 @@ export default function PassengerDashboard() {
 
       {/* PROFIL TAB */}
       {tab==="profil"&&(
-        <div className="tab-page" style={{paddingTop:72}}>
-          <div style={{background:"linear-gradient(135deg,#2F5C52,#4A7C6F)",borderRadius:20,padding:"18px",marginBottom:16,display:"flex",gap:14,alignItems:"center",color:"#fff"}}>
-            <div style={{width:52,height:52,borderRadius:"50%",background:"rgba(255,255,255,.15)",border:"2px solid rgba(255,255,255,.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>👤</div>
+        <div className="tab-page">
+          <div style={{background:T.forest,borderRadius:16,padding:"18px",marginBottom:16,display:"flex",gap:14,alignItems:"center",color:"#FFFFFF"}}>
+            <div style={{width:54,height:54,borderRadius:"50%",background:"rgba(255,255,255,.15)",border:"2.5px solid rgba(255,255,255,.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>👤</div>
             <div>
-              <div style={{fontFamily:ff2,fontSize:16,fontWeight:700}}>Penumpang</div>
-              <div style={{fontSize:12,opacity:.75}}>penumpang@bajaj.com</div>
-              <div style={{marginTop:6,background:"rgba(196,94,62,.8)",padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:600,display:"inline-block"}}>Member Koperasi</div>
+              <div style={{fontFamily:ff2,fontSize:17,fontWeight:700}}>Penumpang</div>
+              <div style={{fontSize:13,opacity:.8,fontWeight:500,marginBottom:6}}>penumpang@bajaj.com</div>
+              <div style={{background:T.terra,padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-block"}}>Member Koperasi</div>
             </div>
           </div>
           <div className="info-card">
-            <div className="stat-row"><span style={{color:T.ink3}}>Total perjalanan</span><span style={{fontWeight:600}}>3 trip</span></div>
-            <div className="stat-row"><span style={{color:T.ink3}}>Total pengeluaran</span><span style={{fontWeight:600}}>Rp 62.000</span></div>
-            <div className="stat-row"><span style={{color:T.ink3}}>CO₂ dihemat</span><span style={{fontWeight:600,color:T.sage}}>~1.2 kg 🌿</span></div>
-            <div className="stat-row"><span style={{color:T.ink3}}>Rating rata-rata</span><span style={{fontWeight:600}}>⭐ 5.0</span></div>
+            <div className="stat-row"><span style={{color:T.ink3,fontWeight:600}}>Total perjalanan</span><span style={{fontWeight:700,color:T.ink}}>3 trip</span></div>
+            <div className="stat-row"><span style={{color:T.ink3,fontWeight:600}}>Total pengeluaran</span><span style={{fontWeight:700,color:T.ink}}>Rp 62.000</span></div>
+            <div className="stat-row"><span style={{color:T.ink3,fontWeight:600}}>CO₂ dihemat</span><span style={{fontWeight:700,color:T.forest}}>~1.2 kg 🌿</span></div>
+            <div className="stat-row"><span style={{color:T.ink3,fontWeight:600}}>Rating rata-rata</span><span style={{fontWeight:700,color:T.ink}}>⭐ 5.0</span></div>
           </div>
-          <div className="info-box-sage">
+          <div style={{background:T.forestBg,border:`2px solid ${T.forest}`,borderRadius:12,padding:"14px 16px",fontSize:13,fontWeight:600,color:T.forestD,lineHeight:1.7}}>
             🌿 Dengan naik bajaj listrik Koperasi Syarikat Islam, kamu berkontribusi mengurangi polusi Jakarta dan mendukung ekonomi kerakyatan!
           </div>
         </div>
       )}
 
       {/* NAV */}
-      {!["searching","found","riding"].includes(step)||tab!=="home"?(
-        <nav className="nav-bar">
-          {[{id:"home",ic:"🛺",lbl:"Pesan"},{id:"riwayat",ic:"🕐",lbl:"Riwayat"},{id:"profil",ic:"👤",lbl:"Profil"}].map(n=>(
-            <div key={n.id} className={`nav-item ${tab===n.id?"active":""}`} onClick={()=>setTab(n.id)}>
-              <div className="nav-ic">{n.ic}</div>
-              <div className="nav-lbl">{n.lbl}</div>
-            </div>
-          ))}
-        </nav>
-      ):null}
+      <nav className="nav-bar">
+        {[{id:"home",ic:"🛺",lbl:"Pesan"},{id:"riwayat",ic:"🕐",lbl:"Riwayat"},{id:"profil",ic:"👤",lbl:"Profil"}].map(n=>(
+          <div key={n.id} className={`nav-item ${tab===n.id?"active":""}`} onClick={()=>setTab(n.id)}>
+            <div className="nav-ic">{n.ic}</div>
+            <div className="nav-lbl">{n.lbl}</div>
+          </div>
+        ))}
+      </nav>
     </div>
   )
 }
