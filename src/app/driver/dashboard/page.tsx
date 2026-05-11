@@ -1,6 +1,11 @@
 // src/app/driver/dashboard/page.tsx
 
-import DriverDashboard from "@/components/driver/DriverDashboard"
+import dynamic from "next/dynamic"
+
+const DriverDashboard = dynamic(
+  () => import("@/components/driver/DriverDashboard"),
+  { ssr: false }
+)
 
 export const metadata = {
   title: "Dashboard Pengemudi | Roda Tiga Jakarta",
