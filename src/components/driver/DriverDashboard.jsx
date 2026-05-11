@@ -195,7 +195,7 @@ export default function DriverDashboard() {
 
   const initMap = () => {
     if (!mapRef.current || mapInstanceRef.current) return
-    const mapboxgl = window.mapboxgl
+    const mapboxgl = (window as any).mapboxgl
     mapboxgl.accessToken = MAPBOX_TOKEN
     const map = new mapboxgl.Map({
       container: mapRef.current,
@@ -262,7 +262,7 @@ export default function DriverDashboard() {
       orderMarkersRef.current.forEach(m => m.remove())
       const el = document.createElement("div")
       el.innerHTML = `<div style="background:#C4622D;color:#fff;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2)">📍 Jemput</div>`
-      orderMarkersRef.current = [new window.mapboxgl.Marker({ element: el, anchor: "bottom" }).setLngLat([order.pickupLng, order.pickupLat]).addTo(mapInstanceRef.current)]
+      orderMarkersRef.current = [new (window as any).mapboxgl.Marker({ element: el, anchor: "bottom" }).setLngLat([order.pickupLng, order.pickupLat]).addTo(mapInstanceRef.current)]
       mapInstanceRef.current.flyTo({ center: [order.pickupLng, order.pickupLat], zoom: 15 })
     }
   }, [])
