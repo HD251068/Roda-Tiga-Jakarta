@@ -21,6 +21,8 @@ interface ActiveRide {
   commission_rate: number
   driver_earning: number
   status: string
+  arrived_at?: string
+  passenger_boarded_at?: string
   created_at: string
 }
 
