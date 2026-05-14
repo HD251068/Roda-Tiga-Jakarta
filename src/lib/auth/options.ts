@@ -1,7 +1,7 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import { ensureProfile } from '@/lib/auth/helpers'
+import { ensureProfile } from '@/lib/auth/ensure-profile'
 
 export const authOptions: NextAuthOptions = {
   providers: [
