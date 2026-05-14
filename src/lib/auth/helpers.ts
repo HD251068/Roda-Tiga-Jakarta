@@ -8,26 +8,46 @@ export async function getSession() {
   return getServerSession(authOptions)
 }
 
+export async function getUserId(): Promise<string | null> {
+  const session = await getSession()
+  if (!session?.user) return null
+  return (session.user as any).id ?? null
+}
+
 export async function getProfile(): Promise<Profile | null> {
   const session = await getSession()
-  if (!(session?.user as any)?.id) return null
-  const { data } = await supabaseAdmin.from('profiles').select('*').eq('id', (session.user as any).id).single()
+  const userId = (session?.user as any)?.id
+  if (!userId) return null
+  const { data } = await supabaseAdmin
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single()
   return data as Profile | null
 }
 
 export async function getDriverProfile(userId: string): Promise<DriverProfile | null> {
-  const { data } = await supabaseAdmin.from('driver_profiles').select('*').eq('user_id', userId).single()
+  const { data } = await supabaseAdmin
+    .from('driver_profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
   return data as DriverProfile | null
 }
 
 export async function getPassengerProfile(userId: string): Promise<PassengerProfile | null> {
-  const { data } = await supabaseAdmin.from('passenger_profiles').select('*').eq('user_id', userId).single()
+  const { data } = await supabaseAdmin
+    .from('passenger_profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
   return data as PassengerProfile | null
 }
 
 export async function requireAuth() {
   const session = await getSession()
-  if (!(session?.user as any)?.id) {
+  const userId = (session?.user as any)?.id
+  if (!userId) {
     return { session: null, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   }
   return { session, error: null }
@@ -57,8 +77,10 @@ export async function ensureProfile(userId: string, userData: {
   if (existing) return existing as Profile
 
   const { data, error } = await supabaseAdmin.from('profiles').insert({
-    id: userId, phone: userData.phone ?? '', full_name: userData.full_name ?? '',
-    email: userData.email, role: userData.role ?? 'passenger', is_active: true,
+    id: userId,
+    phone: userData.phone ?? '',
+    full_name: userData.full_name ?? '',
+    role: userData.role ?? 'passenger',
   }).select().single()
 
   if (error || !data) return null
