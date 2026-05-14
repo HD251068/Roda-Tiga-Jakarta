@@ -1,46 +1,45 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import { createHash } from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import { ensureProfile } from '@/lib/auth/ensure-profile'
+
+function hashPin(pin: string): string {
+  return createHash('sha256').update(pin + 'roda3jkt').digest('hex')
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'credentials',
       credentials: {
-        email:    { label: 'Email',    type: 'email' },
-        password: { label: 'Password', type: 'password' },
-        phone:    { label: 'Phone',    type: 'text' },
-        role:     { label: 'Role',     type: 'text' },
+        phone: { label: 'Phone', type: 'text' },
+        pin:   { label: 'PIN',   type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null
+        if (!credentials?.phone || !credentials?.pin) return null
 
-        const { data: { user }, error } = await supabaseAdmin.auth.signInWithPassword({
-          email: credentials.email,
-          password: credentials.password,
-        })
-        if (error || !user) return null
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('id, full_name, phone, role, pin_hash, is_active')
+          .eq('phone', credentials.phone)
+          .single()
 
-        const profile = await ensureProfile(user.id, {
-          email:     user.email,
-          full_name: user.user_metadata?.full_name ?? credentials.email,
-          phone:     credentials.phone ?? user.user_metadata?.phone ?? '',
-          role:      (credentials.role as 'passenger' | 'driver') ?? 'passenger',
-        })
-        if (!profile) return null
+        if (!profile || !profile.is_active || !profile.pin_hash) return null
+
+        const inputHash = hashPin(credentials.pin)
+        if (inputHash !== profile.pin_hash) return null
 
         return {
-          id:    user.id,
-          email: user.email ?? '',
+          id:    profile.id,
           name:  profile.full_name,
+          email: profile.phone,
           role:  profile.role,
           phone: profile.phone,
         }
       }
     })
   ],
-  pages: { signIn: '/', error: '/' },
+  pages: { signIn: '/driver/login', error: '/driver/login' },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
