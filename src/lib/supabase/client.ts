@@ -1,6 +1,3 @@
-// Alias untuk backward compatibility
-// Komponen lama yang import dari '@/lib/supabase/client' tetap bekerja
-export { createSupabaseBrowser as supabase } from './browser'
 import { createBrowserClient } from '@supabase/ssr'
 
 const supabase = createBrowserClient(
@@ -9,3 +6,4 @@ const supabase = createBrowserClient(
 )
 
 export default supabase
+export { supabase }
