@@ -60,7 +60,7 @@ export default function DriverDashboard() {
   // ── Load data driver ──────────────────────────────────────
   const loadProfile = useCallback(async () => {
     if (!session?.user) return
-    const userId = (session.user as any).id
+    const userId = (session?.user as any)?.id
 
     const { data } = await supabase
       .from('driver_profiles')
@@ -87,7 +87,7 @@ export default function DriverDashboard() {
   // ── Load active ride milik driver ini ─────────────────────
   const loadActiveRide = useCallback(async () => {
     if (!session?.user) return
-    const userId = (session.user as any).id
+    const userId = (session?.user as any)?.id
 
     const { data } = await supabase
       .from('rides')
@@ -105,7 +105,7 @@ export default function DriverDashboard() {
   // ── Load notifikasi ───────────────────────────────────────
   const loadNotifications = useCallback(async () => {
     if (!session?.user) return
-    const userId = (session.user as any).id
+    const userId = (session?.user as any)?.id
 
     const { data } = await supabase
       .from('notifications')
