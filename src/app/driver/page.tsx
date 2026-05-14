@@ -1,6 +1,6 @@
-import dynamic from "next/dynamic"
+import dynamicImport from "next/dynamic"
 export const dynamic = 'force-dynamic'
-const DriverDashboard = dynamic(
+const DriverDashboard = dynamicImport(
   () => import("@/components/driver/DriverDashboard"),
   { ssr: false }
 )
