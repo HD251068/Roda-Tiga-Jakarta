@@ -18,23 +18,41 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.phone || !credentials?.pin) return null
 
-        const { data: profile } = await supabaseAdmin
-          .from('profiles')
-          .select('id, full_name, phone, role, pin_hash')
-          .eq('phone', credentials.phone)
-          .single()
+        try {
+          // Normalize phone
+          let phone = credentials.phone.replace(/\D/g, '')
+          if (phone.startsWith('62')) phone = phone.slice(2)
+          if (phone.startsWith('0')) phone = phone.slice(1)
 
-        if (!profile || !profile.pin_hash) return null
+          // Query langsung ke Supabase
+          const { data: profile, error } = await supabaseAdmin
+            .from('profiles')
+            .select('id, full_name, phone, role, pin_hash')
+            .eq('phone', phone)
+            .single()
 
-        const inputHash = hashPin(credentials.pin)
-        if (inputHash !== profile.pin_hash) return null
+          console.log('Login attempt:', phone, 'profile found:', !!profile, 'error:', error?.message)
 
-        return {
-          id:    profile.id,
-          name:  profile.full_name,
-          email: profile.phone,
-          role:  profile.role,
-          phone: profile.phone,
+          if (error || !profile || !profile.pin_hash) {
+            console.log('Profile not found or no pin_hash')
+            return null
+          }
+
+          const inputHash = hashPin(credentials.pin)
+          console.log('Hash match:', inputHash === profile.pin_hash)
+
+          if (inputHash !== profile.pin_hash) return null
+
+          return {
+            id:    profile.id,
+            name:  profile.full_name,
+            email: profile.phone,
+            role:  profile.role,
+            phone: profile.phone,
+          }
+        } catch (err) {
+          console.error('Authorize error:', err)
+          return null
         }
       }
     })
