@@ -236,7 +236,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [x] Charging station booking
 
 ### 🔨 Sedang / Berikutnya
-- [ ] **Auth & session** — hubungkan Supabase Auth ke tabel `users`
+- [x] **Database migration selesai** — 18 tabel, 25 FK, 4 views
+  - [ ] **Auth &amp; session** — hubungkan Supabase Auth ke tabel `users`
   - `passenger_id` masih `'temp-user-id'` di `create-ride/route.ts`
 - [ ] **DriverDashboard component** — dirujuk tapi belum ada
   - Path: `src/components/driver/DriverDashboard.tsx`
@@ -289,3 +290,29 @@ melebihi 3% yang dikorbankan per trip sempurna.
 
 Gojek dan Grab tidak bisa bermain di level ini karena overhead mereka
 terlalu gemuk untuk merasakan dampak efisiensi mikro per trip.
+
+---
+
+## Catatan Migration
+
+**Status: SELESAI — $(date '+%Y-%m-%d')**
+
+Semua tabel aktif di Supabase:
+
+| Kategori | Tabel |
+|---|---|
+| Core | `profiles` (=users), `rides` |
+| Driver | `driver_profiles`, `driver_documents`, `tier_history`, `score_events` |
+| Penumpang | `passenger_profiles` |
+| Keuangan | `wallet_transactions`, `financing_contracts`, `financing_payments` |
+| Operasional | `stations`, `charging_bookings`, `workshops`, `workshop_bookings` |
+| Sistem | `disputes`, `notifications`, `platform_events`, `fare_rules` |
+| Views | `users`, `view_earnings`, `view_stations`, `view_platform_health` |
+
+**Catatan penting:**
+- Tabel `profiles` adalah tabel users utama — bukan `users`
+- `users` adalah VIEW yang menunjuk ke `profiles`
+- `rides` kolom lama (`passenger_phone`, `driver_phone`) dipertahankan untuk backward compatibility
+- `rides.passenger_id` dan `rides.driver_id` adalah UUID references ke `profiles(id)`
+- `stations.id` bertipe integer (bukan UUID) — join ke `charging_bookings` pakai cast `::text`
+- Semua business logic ada di database functions dan triggers — tidak di aplikasi
