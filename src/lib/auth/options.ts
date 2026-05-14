@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
 
         const { data: profile } = await supabaseAdmin
           .from('profiles')
-          .select('id, full_name, phone, role, pin_hash, is_active')
+          .select('id, full_name, phone, role, pin_hash')
           .eq('phone', credentials.phone)
           .single()
 
