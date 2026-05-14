@@ -129,16 +129,46 @@ Migration sudah dijalankan — semua tabel aktif.
 | Silver | 600–749 | 10% |
 | Probation | < 600 | 10% + coaching |
 
-### Reward System (fee bisa turun ke 7%)
-| Perilaku | Reward |
-|---|---|
-| Driver tiba ontime | −1% fee trip itu |
-| Penumpang langsung naik (< 2 menit) | −2% fee trip itu |
-| Keduanya sempurna | −3% total → fee 7% |
-| Streak 10 trip sempurna | Badge Profesional |
-| Streak 50 trip sempurna | Fee permanen −0.5% |
+### Reward System — Investasi Efisiensi, Bukan Diskon
 
-**Biaya operasional platform: 2%. Fee minimum: 2%. Selalu profitable.**
+Platform mengorbankan sebagian komisi untuk membeli efisiensi waktu tunggu.
+Waktu tunggu lebih pendek → trip per jam naik → volume naik → revenue naik.
+Ini bukan bagi margin — ini investasi operasional yang ROI-nya positif.
+
+| Perilaku | Penerima | Bentuk | Nilai |
+|---|---|---|---|
+| Driver tiba ontime | Driver | Bonus cash ke wallet | 1% dari fare |
+| Penumpang sudah siap, langsung naik | Penumpang | Cashback ke wallet | 2% dari fare |
+| Keduanya sempurna | Keduanya | Bonus + cashback | 3% dari fare |
+| Streak 10 trip sempurna | Driver | Badge Profesional | — |
+| Streak 50 trip sempurna | Driver | Badge Excellent | — |
+
+**Kenapa cashback, bukan diskon:**
+- Diskon tidak terasa — tarif sudah lebih murah dari kompetitor
+- Cashback terlihat nyata — saldo wallet bertambah, ada momen kepuasan
+- Cashback mengunci penumpang di ekosistem — saldo hanya berlaku di platform ini
+- Bonus wallet driver terlihat langsung di dashboard — reinforcement instan
+
+**Matematika per trip Rp 20.000 (trip sempurna):**
+- Platform ambil komisi 10% = Rp 2.000
+- Bonus driver (1%) = Rp 200 keluar dari komisi
+- Cashback penumpang (2%) = Rp 400 keluar dari komisi
+- Platform bersih: Rp 1.400 — masih 5× di atas biaya operasional 2%
+
+**Flywheel efisiensi:**
+```
+Driver ontime → cashback penumpang
+      ↓
+Penumpang siap → bonus driver
+      ↓
+Waktu tunggu turun → trip per jam naik +30–40%
+      ↓
+Volume trip naik → revenue platform naik
+      ↓
+Platform punya lebih banyak ruang untuk reward
+```
+
+**Biaya operasional platform: 2%. Komisi minimum: 2%. Selalu profitable.**
 
 ---
 
@@ -251,3 +281,11 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 Driver yang merasa diperlakukan adil tidak akan pindah platform.  
 Penumpang yang merasa sistemnya jujur tidak akan pindah karena promo.  
 Loyalitas berbasis martabat lebih kuat dari loyalitas berbasis diskon.
+
+**Tentang reward system:** Platform tidak sedang membagi margin.
+Platform sedang membeli efisiensi operasional — waktu tunggu lebih pendek,
+frekuensi trip lebih tinggi, volume lebih besar. Nilai yang didapat jauh
+melebihi 3% yang dikorbankan per trip sempurna.
+
+Gojek dan Grab tidak bisa bermain di level ini karena overhead mereka
+terlalu gemuk untuk merasakan dampak efisiensi mikro per trip.
