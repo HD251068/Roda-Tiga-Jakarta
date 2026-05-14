@@ -10,7 +10,7 @@ export async function getSession() {
 
 export async function getProfile(): Promise<Profile | null> {
   const session = await getSession()
-  if (!session?.user?.id) return null
+  if (!(session?.user as any)?.id) return null
   const { data } = await supabaseAdmin.from('profiles').select('*').eq('id', (session.user as any).id).single()
   return data as Profile | null
 }
