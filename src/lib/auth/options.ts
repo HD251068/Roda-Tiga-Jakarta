@@ -24,7 +24,7 @@ export const authOptions: NextAuthOptions = {
           .eq('phone', credentials.phone)
           .single()
 
-        if (!profile || !profile.is_active || !profile.pin_hash) return null
+        if (!profile || !profile.pin_hash) return null
 
         const inputHash = hashPin(credentials.pin)
         if (inputHash !== profile.pin_hash) return null
